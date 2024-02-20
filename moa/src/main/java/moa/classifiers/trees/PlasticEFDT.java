@@ -11,13 +11,6 @@ import java.util.ArrayList;
 
 public class PlasticEFDT extends LightweightEFDT {
 
-    public PlasticEFDT() {
-        super();
-        relMinDeltaG = new FloatOption("relMinDeltaG",
-                'G', "Relative minimum information gain to split a tie during reevaluation.",
-                0.0, 0.0, 1.0);
-    }
-
     public IntOption maxBranchLengthOption = new IntOption(
             "maxBranchLength",
             'B',
@@ -27,6 +20,10 @@ public class PlasticEFDT extends LightweightEFDT {
     public FloatOption acceptedNumericThresholdDeviationOption = new FloatOption("acceptedNumericThresholdDeviation",
             'Z', "The accepted deviation between the current numeric threshold of a node and the desired threshold. If the absolute difference is smaller, we keep the successors and simply adjust the threshold.",
             0.05, 0.0, 1_000_000.0);
+    
+    public void PlasticNode() {
+        
+    }
 
     @Override
     PlasticNode createRoot() {
@@ -36,7 +33,6 @@ public class PlasticEFDT extends LightweightEFDT {
                 splitConfidenceOption.getValue(),
                 adaptiveConfidenceOption.getValue(),
                 useAdaptiveConfidenceOption.isSet(),
-                disableBlockParentSplitAttribute.isSet(),
                 leafpredictionOption.getChosenLabel(),
                 reEvalPeriodOption.getValue(),
                 0,
@@ -50,8 +46,7 @@ public class PlasticEFDT extends LightweightEFDT {
                 new DoubleVector(),
                 new ArrayList<>(),
                 maxBranchLengthOption.getValue(),
-                acceptedNumericThresholdDeviationOption.getValue(),
-                null
+                acceptedNumericThresholdDeviationOption.getValue()
         );
     }
 }

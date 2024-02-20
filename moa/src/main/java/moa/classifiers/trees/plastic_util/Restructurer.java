@@ -3,8 +3,6 @@ package moa.classifiers.trees.plastic_util;
 import com.yahoo.labs.samoa.instances.Attribute;
 import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
-import moa.classifiers.core.conditionaltests.NominalAttributeMultiwayTest;
-import moa.core.AutoExpandVector;
 import moa.core.DoubleVector;
 
 import java.util.*;
@@ -20,8 +18,8 @@ public class Restructurer {
     }
 
     public PlasticNode restructure(PlasticNode node, AttributeSplitSuggestion suggestion, Attribute splitAttribute, Double splitValue) {
+        boolean isBinary = suggestion.resultingClassDistributions.length == 1;
         int splitAttributeIndex = suggestion.splitTest.getAttsTestDependsOn()[0];
-        boolean isBinary = suggestion.splitTest.getClass() != NominalAttributeMultiwayTest.class;
 
         boolean checkSucceeds = checkPreconditions(node, splitAttribute, splitValue, isBinary);
         if (!checkSucceeds)
@@ -48,14 +46,7 @@ public class Restructurer {
         if (mappedTree == null)
             return null;
 
-        for (PlasticBranch branch: mappedTree) {
-            PlasticNode lastNode = branch.getLast().getNode();
-            if (!lastNode.isLeaf())
-                getStatsForNonLeafs(lastNode);
-        }
-
         expandMappedTree(mappedTree, splitAttribute, splitAttributeIndex, splitValue);
-
         LinkedList<PlasticBranch> finalBranches = new LinkedList<>();
         for (PlasticBranch branch: mappedTree) {
             finalBranches.addAll(decoupleLastNode(branch));
@@ -76,6 +67,7 @@ public class Restructurer {
         newRoot.updateUsedNominalAttributesInSubtree(splitAttribute, splitAttributeIndex);
         newRoot.getSuccessors().getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
 
+        int i = 0;
         ArrayList<SuccessorIdentifier> sortedKeys = new ArrayList<>(newRoot.getSuccessors().getKeyset());
         Collections.sort(sortedKeys);
         for (SuccessorIdentifier key: sortedKeys) {
@@ -98,19 +90,21 @@ public class Restructurer {
             }
             else {
                 if (key.isLower()) {
-                    successor.observedClassDistribution = new DoubleVector(suggestion.resultingClassDistributionFromSplit(0));
-                    successor.classDistributionAtTimeOfCreation = new DoubleVector(suggestion.resultingClassDistributionFromSplit(0));
+                    successor.observedClassDistribution = new DoubleVector(suggestion.resultingClassDistributions[0]);
+                    successor.classDistributionAtTimeOfCreation = new DoubleVector(suggestion.resultingClassDistributions[0]);
                 }
                 else {
-                    successor.observedClassDistribution = new DoubleVector(suggestion.resultingClassDistributionFromSplit(1));
-                    successor.classDistributionAtTimeOfCreation = new DoubleVector(suggestion.resultingClassDistributionFromSplit(1));
+                    successor.observedClassDistribution = new DoubleVector(suggestion.resultingClassDistributions[1]);
+                    successor.classDistributionAtTimeOfCreation = new DoubleVector(suggestion.resultingClassDistributions[1]);
                 }
             }
+            i++;
         }
 
         for (CustomEFDTNode s1: newRoot.getSuccessors().getAllSuccessors()) {
-            if (!s1.isLeaf())
-                finalPrune((PlasticNode) s1);
+            if (s1.isLeaf())
+                continue;
+            finalPrune((PlasticNode) s1);
         }
 
         return newRoot;
@@ -259,7 +253,6 @@ public class Restructurer {
                 Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
                 int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
                 InstanceConditionalTest splitTest = lastNode.getSplitTest();
-
                 lastNode.forceSplit(
                         swapAttribute,
                         swapAttributeIndex,
@@ -296,6 +289,7 @@ public class Restructurer {
                                                 Double splitValue) {
         assert splitValue != null;
         PlasticNode lastNode = branch.getLast().getNode();
+        SuccessorIdentifier lastSuccessorId = branch.getLast().getKey();
         boolean forceSplit = lastNode.isLeaf();
         forceSplit |= lastNode.splitAttribute != swapAttribute;
 
@@ -314,19 +308,17 @@ public class Restructurer {
         if (splitValue.equals(oldThreshold))
             return; // do nothing
 
-        if (Math.abs(splitValue - oldThreshold) < acceptedThresholdDeviation) {
-            SuccessorIdentifier leftKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, true);
-            SuccessorIdentifier rightKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, false);
-            PlasticNode succ1 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(leftKey);
-            PlasticNode succ2 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(rightKey);
-            Successors newSuccessors = new Successors(true, true, splitValue);
-            if (succ1 != null)
-                newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
-            if (succ2 != null)
-                newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
-            lastNode.successors = newSuccessors;
-            return;
-        }
+//        if (Math.abs(splitValue - oldThreshold) < acceptedThresholdDeviation) {
+//            SuccessorIdentifier leftKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, true);
+//            SuccessorIdentifier rightKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, false);
+//            PlasticNode succ1 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(leftKey);
+//            PlasticNode succ2 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(rightKey);
+//            Successors newSuccessors = new Successors(true, true, splitValue);
+//            newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
+//            newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
+//            lastNode.successors = newSuccessors;
+//            return;
+//        }
 
         if (lastNode.getSuccessors().size() > 1) {
             updateThreshold(lastNode, swapAttributeIndex, splitValue);
@@ -354,7 +346,6 @@ public class Restructurer {
         newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
         newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
         node.successors = newSuccessors;
-        node.setRestructuredFlag();
 
         if (node.isLeaf())
             return;
@@ -362,12 +353,15 @@ public class Restructurer {
         for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
             PlasticNode s = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
             removeUnreachableSubtree(s, splitAttributeIndex, splitValue, key.isLower());
+            if (Math.abs(splitValue - oldThreshold) <= acceptedThresholdDeviation) {
+                setRestructuredFlagInSubtree(s);
+            }
         }
     }
 
     private void keepSuccessorsResetSplitters(PlasticNode lastNode, int swapAttributeIndex, double splitValue) {
         PlasticNode R = lastNode;
-//        R.setRestructuredFlag();
+        R.setRestructuredFlag();
         Attribute splitAttribute = R.getSplitAttribute();
         Integer splitAttributeIndex = R.getSplitAttributeIndex();
 
@@ -531,14 +525,13 @@ public class Restructurer {
     private void putLastElementToFront(PlasticBranch branch, Attribute splitAttribute) {
         PlasticTreeElement oldFirstBranchElement = branch.getBranchRef().getFirst();
         PlasticTreeElement newFirstBranchElement = branch.getBranchRef().remove(branch.getBranchRef().size() - 2);
-        assert newFirstBranchElement.getNode().splitAttribute == splitAttribute;
         branch.getBranchRef().addFirst(newFirstBranchElement);
 
-        //TODO not sure this is actually required! I think it could be sufficient to just change the successors when building the tree in a later step.
         PlasticNode oldFirstNode = oldFirstBranchElement.getNode();
         PlasticNode newFirstNode = newFirstBranchElement.getNode();
+
+        //TODO not sure this is actually required! I think it could be sufficient to just change the successors when building the tree in a later step.
         newFirstNode.observedClassDistribution = oldFirstNode.observedClassDistribution;
-        newFirstNode.classDistributionAtTimeOfCreation = oldFirstNode.classDistributionAtTimeOfCreation;
         newFirstNode.depth = oldFirstNode.depth;
         newFirstNode.attributeObservers = oldFirstNode.attributeObservers;
     }
@@ -582,25 +575,20 @@ public class Restructurer {
     }
 
     private void cleanupSubtree(PlasticNode node) {
-        if (!node.isLeaf()) {
-            node.observedClassDistribution = new DoubleVector();
-            node.classDistributionAtTimeOfCreation = new DoubleVector();
+        if (node.getRestructuredFlag()) {
+            if (!node.isLeaf()) {
+                node.observedClassDistribution = new DoubleVector();
+                node.classDistributionAtTimeOfCreation = new DoubleVector();
+            }
+            node.resetInfogainTracking();
+            node.resetObservers();
+            node.seenWeight = 0.0;
+            node.nodeTime = 0;
+            node.numSplitAttempts = 0;
+            node.resetRestructuredFlag();
         }
-//        else {
-//            //TODO: normalize the values (still able to predict but adaptive)
-//            for (int i = 0; i < node.observedClassDistribution.numValues(); i++) {
-//                node.observedClassDistribution.setValue(i, node.observedClassDistribution.getValue(i) / node.observedClassDistribution.sumOfValues());
-//            }
-//        }
-        node.resetInfogainTracking();
-        node.resetObservers();
-        node.seenWeight = 0.0;
-        node.nodeTime = 0;
-        node.numSplitAttempts = 0;
-        node.resetRestructuredFlag();
-        if (!node.isLeaf()) {
+        if (!node.isLeaf())
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
-        }
     }
 
     private void finalPrune(PlasticNode node) {
@@ -608,21 +596,15 @@ public class Restructurer {
             return;
         Set<SuccessorIdentifier> keys = new HashSet<>(node.getSuccessors().getKeyset());
 
-        boolean allArtificial = true;
         for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
             PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
-            if (successor.isArtificial()) {
-                allArtificial = false;
-                break;
-            }
+            collectStats(successor);
         }
 
         for (SuccessorIdentifier key: keys) {
             PlasticNode thisNode = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
-            if (thisNode.isDummy())
+            if (thisNode.isDummy() || thisNode.isArtificial()) {
                 node.getSuccessors().removeSuccessor(key);
-            if (thisNode.isArtificial()) {
-             node.getSuccessors().removeSuccessor(key);
             }
         }
 
@@ -631,7 +613,6 @@ public class Restructurer {
             node.resetSplitAttribute();
             return;
         }
-
         for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
             PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
             finalPrune(successor);
@@ -688,24 +669,9 @@ public class Restructurer {
     }
 
     private void setRestructuredFlagInSubtree(PlasticNode node) {
+        if (node.isLeaf())
+            return;
         node.setRestructuredFlag();
-        if (!node.isLeaf())
-            node.getSuccessors().getAllSuccessors().forEach(s -> setRestructuredFlagInSubtree((PlasticNode) s));
-    }
-
-    private void getStatsForNonLeafs(PlasticNode node) {
-        DoubleVector stats = new DoubleVector();
-        for (CustomEFDTNode successor: node.getSuccessors().getAllSuccessors()) {
-            DoubleVector successorStats = new DoubleVector(successor.getObservedClassDistribution());
-            for (int i = 0; i < successorStats.maxIndex(); i++) {
-                stats.addToValue(i, successorStats.getValue(i));
-            }
-        }
-        int numValuesInSuccessorStats = stats.numValues();
-        int numValuesInOwnStats = stats.numValues();
-
-        if (numValuesInOwnStats < numValuesInSuccessorStats) {
-            node.observedClassDistribution = stats;
-        }
+        node.getSuccessors().getAllSuccessors().forEach(s -> setRestructuredFlagInSubtree((PlasticNode) s));
     }
 }
