@@ -9,67 +9,74 @@ import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserve
 import moa.classifiers.core.attributeclassobservers.NumericAttributeClassObserver;
 import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
 import moa.classifiers.core.conditionaltests.NominalAttributeBinaryTest;
+import moa.classifiers.core.conditionaltests.NominalAttributeMultiwayTest;
 import moa.classifiers.core.conditionaltests.NumericAttributeBinaryTest;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
+import moa.classifiers.trees.EFDT;
 import moa.core.AutoExpandVector;
 import moa.core.DoubleVector;
-import org.w3c.dom.Attr;
 
 import java.util.*;
 
-public class PlasticNode {
-    private final int gracePeriod;
-    private final SplitCriterion splitCriterion;
-    private final Double confidence;
-    private final boolean useAdaptiveConfidence;
-    private final Double adaptiveConfidence;
-    private final String leafPrediction;
-    private final Integer minSamplesReevaluate;
-    private Integer depth;
-    private final Integer maxDepth;
-    private final Double tau;
-    private final Double tauReevaluate;
-    private final Double relMinDeltaG;
-    private final boolean binaryOnly;
+public class CustomEFDTNode {
+    protected final int gracePeriod;
+    protected final SplitCriterion splitCriterion;
+    protected final Double confidence;
+    protected final boolean useAdaptiveConfidence;
+    protected final Double adaptiveConfidence;
+    protected final String leafPrediction;
+    protected final Integer minSamplesReevaluate;
+    protected Integer depth;
+    protected final Integer maxDepth;
+    protected final Double tau;
+    protected final Double tauReevaluate;
+    protected final Double relMinDeltaG;
+    protected final boolean binaryOnly;
     protected List<Integer> usedNominalAttributes;
-    private final HashMap<Integer, Double> infogainSum = new HashMap<>();
-    private InstanceConditionalTest splitTest;
-    private int numSplitAttempts = 0;
-    private final NominalAttributeClassObserver nominalObserverBlueprint;
-    private final GaussianNumericAttributeClassObserver numericObserverBlueprint = new GaussianNumericAttributeClassObserver();
+    protected HashMap<Integer, Double> infogainSum;
+    protected InstanceConditionalTest splitTest;
+    protected int numSplitAttempts = 0;
+    protected final NominalAttributeClassObserver nominalObserverBlueprint;
+    protected final GaussianNumericAttributeClassObserver numericObserverBlueprint = new GaussianNumericAttributeClassObserver();
 
-    private final DoubleVector classDistributionAtTimeOfCreation;
-    private final DoubleVector observedClassDistribution;
-    private AutoExpandVector<AttributeClassObserver> attributeObservers = new AutoExpandVector<>();
-    private Double seenWeight = 0.0;
-    private int nodeTime = 0;
-    private Successors successors;
-    private Attribute splitAttribute;
-    private int splitAttributeIndex;
-    private final boolean noPrePrune;
+    protected DoubleVector classDistributionAtTimeOfCreation;
+    protected DoubleVector observedClassDistribution;
+    protected AutoExpandVector<AttributeClassObserver> attributeObservers = new AutoExpandVector<>();
+    protected Double seenWeight = 0.0;
+    protected int nodeTime = 0;
+    protected Successors successors;
+    protected Attribute splitAttribute;
+    protected int splitAttributeIndex;
+    protected final boolean noPrePrune;
+    protected Integer blockedAttributeIndex;
+    protected final boolean disableBlockParentSplitAttribute;
+    private boolean isInitialized = false;
 
-    public PlasticNode(SplitCriterion splitCriterion,
-                       int gracePeriod,
-                       Double confidence,
-                       Double adaptiveConfidence,
-                       boolean useAdaptiveConfidence,
-                       String leafPrediction,
-                       Integer minSamplesReevaluate,
-                       Integer depth,
-                       Integer maxDepth,
-                       Double tau,
-                       Double tauReevaluate,
-                       Double relMinDeltaG,
-                       boolean binaryOnly,
-                       boolean noPrePrune,
-                       NominalAttributeClassObserver nominalObserverBlueprint,
-                       DoubleVector observedClassDistribution,
-                       List<Integer> usedNominalAttributes) {
+    public CustomEFDTNode(SplitCriterion splitCriterion,
+                          int gracePeriod,
+                          Double confidence,
+                          Double adaptiveConfidence,
+                          boolean useAdaptiveConfidence,
+                          boolean disableBlockParentSplitAttribute,
+                          String leafPrediction,
+                          Integer minSamplesReevaluate,
+                          Integer depth,
+                          Integer maxDepth,
+                          Double tau,
+                          Double tauReevaluate,
+                          Double relMinDeltaG,
+                          boolean binaryOnly,
+                          boolean noPrePrune,
+                          NominalAttributeClassObserver nominalObserverBlueprint,
+                          DoubleVector observedClassDistribution,
+                          List<Integer> usedNominalAttributes,
+                          Integer blockedAttributeIndex) {
         this.gracePeriod = gracePeriod;
         this.splitCriterion = splitCriterion;
         this.confidence = confidence;
         this.adaptiveConfidence = adaptiveConfidence;
         this.useAdaptiveConfidence = useAdaptiveConfidence;
+        this.disableBlockParentSplitAttribute = disableBlockParentSplitAttribute;
         this.leafPrediction = leafPrediction;
         this.minSamplesReevaluate = minSamplesReevaluate;
         this.depth = depth;
@@ -79,11 +86,13 @@ public class PlasticNode {
         this.relMinDeltaG = relMinDeltaG;
         this.binaryOnly = binaryOnly;
         this.noPrePrune = noPrePrune;
-        this.usedNominalAttributes = usedNominalAttributes;
+        this.usedNominalAttributes = usedNominalAttributes != null ? usedNominalAttributes : new LinkedList<>();
+        this.blockedAttributeIndex = blockedAttributeIndex;
         this.nominalObserverBlueprint = nominalObserverBlueprint;
         this.observedClassDistribution = observedClassDistribution != null ? observedClassDistribution : new DoubleVector();
+        this.infogainSum = new HashMap<>();
         this.infogainSum.put(-1, 0.0); // Initialize for null split
-        classDistributionAtTimeOfCreation = new DoubleVector(observedClassDistribution);
+        classDistributionAtTimeOfCreation = new DoubleVector(this.observedClassDistribution.getArrayCopy());
     }
 
     public static double computeHoeffdingBound(double range, double confidence, double n) {
@@ -116,10 +125,27 @@ public class PlasticNode {
         return splitAttribute;
     }
 
-    private Double currentConfidence() {
+    public Integer getSplitAttributeIndex() {
+        return splitAttributeIndex;
+    }
+
+    public InstanceConditionalTest getSplitTest() {
+        return splitTest;
+    }
+
+    public Integer getDepth() {
+        return depth;
+    }
+
+    public List<Integer> getUsedNominalAttributes() {
+        return usedNominalAttributes;
+    }
+
+    Double currentConfidence() {
         if (!useAdaptiveConfidence)
             return confidence;
-        return adaptiveConfidence * Math.pow(0.5, seenWeight);
+        double d =  adaptiveConfidence * Math.exp(-numSplitAttempts);
+        return d;
     }
 
     public AttributeSplitSuggestion[] getBestSplitSuggestions(SplitCriterion criterion) {
@@ -132,39 +158,48 @@ public class PlasticNode {
                     preSplitDist, new double[][]{preSplitDist})));
         }
         for (int i = 0; i < attributeObservers.size(); i++) {
-            AttributeClassObserver obs = attributeObservers.get(i);
-            if (obs != null) {
-                AttributeSplitSuggestion bestSuggestion = obs.getBestEvaluatedSplitSuggestion(
-                        criterion, preSplitDist, i, binaryOnly
-                );
-                if (bestSuggestion != null) {
-                    bestSuggestions.add(bestSuggestion);
-                }
+            AttributeSplitSuggestion bestSuggestion = getSuggestionForAttributeIndex(i);
+            if (bestSuggestion != null) {
+                bestSuggestions.add(bestSuggestion);
             }
         }
         return bestSuggestions.toArray(new AttributeSplitSuggestion[bestSuggestions.size()]);
     }
 
+    public AttributeSplitSuggestion getSuggestionForAttributeIndex(int i) {
+        AttributeClassObserver obs = attributeObservers.get(i);
+        double[] preSplitDist = observedClassDistribution.getArrayCopy();
+        if (obs != null) {
+            AttributeSplitSuggestion bestSuggestion = obs.getBestEvaluatedSplitSuggestion(
+                    splitCriterion, preSplitDist, i, binaryOnly
+            );
+            return bestSuggestion;
+        }
+        return null;
+    }
+
     public void learnInstance(Instance instance, int totalNumInstances) {
         seenWeight += instance.weight();
         nodeTime++;
+
         updateStatistics(instance);
         updateObservers(instance);
 
         if (isLeaf() && nodeTime % gracePeriod == 0) {
             attemptInitialSplit(instance);
         }
-        if (!isLeaf()) {
-            if (totalNumInstances % minSamplesReevaluate == 0) {
-                reevaluateSplit(instance);
-            }
+        else if (!isLeaf() && totalNumInstances % minSamplesReevaluate == 0) {
+            reevaluateSplit(instance);
+        }
+
+        if (!isLeaf()) { //Do NOT! put this in the upper (!isleaf()) block. This is not the same since we might kill the subtree during reevaluation!
             propagateToSuccessors(instance, totalNumInstances);
         }
     }
 
     public double[] predict(Instance instance) {
         if (!isLeaf()) {
-            PlasticNode successor = getSuccessor(instance);
+            CustomEFDTNode successor = getSuccessor(instance);
             if (successor == null)
                 return getClassVotes();
             return successor.predict(instance);
@@ -172,7 +207,7 @@ public class PlasticNode {
         return getClassVotes();
     }
 
-    private PlasticNode getSuccessor(Instance instance) {
+    private CustomEFDTNode getSuccessor(Instance instance) {
         if (isLeaf())
             return null;
         Double attVal = instance.value(splitAttribute);
@@ -180,18 +215,32 @@ public class PlasticNode {
     }
 
     private void attemptInitialSplit(Instance instance) {
+
+        if (depth >= maxDepth) {
+            return;
+        }
         if (isPure())
             return;
 
-        numSplitAttempts++;
+        numSplitAttempts += 1;
 
         AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
         Arrays.sort(bestSuggestions);
-        updateInfogainSum(bestSuggestions);
         AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
+        updateInfogainSum(bestSuggestions);
 
-        if (!shouldSplitLeaf(bestSuggestions, currentConfidence(), observedClassDistribution))
+//        if (blockedAttributeIndex != null && !disableBlockParentSplitAttribute) {
+//            if (xBest.splitTest.getAttsTestDependsOn()[0] == blockedAttributeIndex) {
+//                if (bestSuggestions.length > 1) {
+//                    // don't use the blocked attribute for initial split. Use second best instead.
+//                    xBest = bestSuggestions[bestSuggestions.length - 2];
+//                }
+//            }
+//        }
+
+        if (!shouldSplitLeaf(bestSuggestions))
             return;
+
         if (xBest.splitTest == null) {
             // preprune - null wins
             System.out.println("preprune - null wins");
@@ -199,32 +248,48 @@ public class PlasticNode {
             resetSplitAttribute();
             return;
         }
-        setSplitAttribute(xBest, instance);
-        initializeSuccessors(xBest, instance);
+        int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
+        Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
+        setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
+        initializeSuccessors(xBest, splitAttribute);
     }
 
-    private void reevaluateSplit(Instance instance) {
+    protected void reevaluateSplit(Instance instance) {
         numSplitAttempts++;
 
-        AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
-        Arrays.sort(bestSuggestions);
-        if (bestSuggestions.length == 0)
-            return;
-        updateInfogainSum(bestSuggestions);
-
         double eps = computeHoeffdingBound(
-                splitCriterion.getRangeOfMerit(classDistributionAtTimeOfCreation.getArrayCopy()),
+                splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef()),
                 currentConfidence(),
-                observedClassDistribution.sumOfValues()
+                nodeTime
+//                observedClassDistribution.sumOfValues()
         );
 
+        AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
+        updateInfogainSum(bestSuggestions);
+        Arrays.sort(bestSuggestions);
+
+        if (bestSuggestions.length == 0)
+            return;
         AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
-        double bestMerit = getSuggestionAverageMerit(xBest.splitTest);
-        double currentMerit = getCurrentSuggestionAverageMerit();
-        double deltaG = bestMerit - currentMerit;
+
+        double bestMerit;
+        if (xBest.splitTest == null) { // best is null
+            bestMerit = infogainSum.get(-1) / numSplitAttempts;
+        } else {
+            bestMerit = infogainSum.get(xBest.splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
+        }
+
+        double currentAverageMerit;
+        if (splitTest == null) { // current is null- shouldn't happen, check for robustness
+            currentAverageMerit = infogainSum.get(-1) / numSplitAttempts;
+        } else {
+            currentAverageMerit = infogainSum.get(splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
+        }
+
+//        double currentMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
+        double deltaG = bestMerit - currentAverageMerit;
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
-            System.err.println(nodeTime);
 
             if (xBest.splitTest == null) {
                 System.out.println("preprune - null wins");
@@ -233,8 +298,8 @@ public class PlasticNode {
             } else {
                 boolean doResplit = true;
                 if (splitTest == xBest.splitTest && splitTest.getClass() == NumericAttributeBinaryTest.class) {
-                    Collection<PlasticNode> successorNodes = successors.getAllSuccessors();
-                    for (PlasticNode successor : successorNodes) {
+                    Collection<CustomEFDTNode> successorNodes = successors.getAllSuccessors();
+                    for (CustomEFDTNode successor : successorNodes) {
                         if (argmax(xBest.resultingClassDistributions[0]) == argmax(successor.getObservedClassDistribution())) {
                             NumericAttributeBinaryTest test = (NumericAttributeBinaryTest) xBest.splitTest;
                             successors.adjustThreshold(test.getSplitValue());
@@ -245,86 +310,73 @@ public class PlasticNode {
                     }
                 }
                 if (doResplit) {
-                    setSplitAttribute(xBest, instance);
-                    initializeSuccessors(xBest, instance);
+                    int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
+                    Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
+                    setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
+                    initializeSuccessors(xBest, splitAttribute);
                 }
             }
         }
     }
 
-    private boolean initializeSuccessors(AttributeSplitSuggestion xBest, Instance instance) {
-        int attIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-        boolean isNumericSplit = instance.attribute(attIndex).isNumeric();
-        if (!isNumericSplit) {
-            successors = new Successors(false, false);
-            boolean isBinary = xBest.resultingClassDistributions.length == 2;
-            if (!isBinary) {
-                for (int i = 0; i < xBest.numSplits(); i++) {
-                    double[] stats = xBest.resultingClassDistributionFromSplit(i);
-                    PlasticNode s = newNode(
-                            depth + 1,
-                            new DoubleVector(stats),
-                            getUsedNominalAttributesForSuccessor());
-                    boolean success = successors.addSuccessorNominalMultiway((double) i, s);
-                    if (!success) {
-                        successors = null;
-                        return false;
-                    }
-                }
-                return true;
-            } else {
-                successors = new Successors(true, false);
-                NominalAttributeBinaryTest test = (NominalAttributeBinaryTest) xBest.splitTest;
-                double value = (double) test.getValue();
-                double[] stats1 = xBest.resultingClassDistributionFromSplit(0);
-                double[] stats2 = xBest.resultingClassDistributionFromSplit(1);
-                PlasticNode s1 = newNode(depth + 1, new DoubleVector(stats1), getUsedNominalAttributesForSuccessor());
-                PlasticNode s2 = newNode(depth + 1, new DoubleVector(stats2), getUsedNominalAttributesForSuccessor());
-                boolean success = successors.addSuccessorNominalBinary(value, s1);
-                success = success && successors.addDefaultSuccessorNominalBinary(s2);
-                if (!success) {
-                    successors = null;
-                    return false;
-                }
-                return true;
-            }
-        } else {
-            successors = new Successors(true, true);
-            NumericAttributeBinaryTest test = (NumericAttributeBinaryTest) xBest.splitTest;
-            double threshold = test.getSplitValue();
-            boolean success = successors.addSuccessorNumeric(
-                    threshold,
-                    newNode(depth + 1, new DoubleVector(xBest.resultingClassDistributionFromSplit(0)), getUsedNominalAttributesForSuccessor()),
-                    true
-            );
-            success = success && successors.addSuccessorNumeric(
-                    threshold,
-                    newNode(depth + 1, new DoubleVector(xBest.resultingClassDistributions[1].clone()), getUsedNominalAttributesForSuccessor()),
-                    false
-            );
-            if (!success) {
-                successors = null;
-                return false;
-            }
-            return true;
+    protected boolean initializeSuccessors(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
+
+        boolean isBinary = xBest.splitTest.getClass() == NominalAttributeBinaryTest.class || xBest.splitTest.getClass() == NumericAttributeBinaryTest.class;
+        boolean isNominal = xBest.splitTest.getClass() != NumericAttributeBinaryTest.class;
+
+        Double splitValue = xBest.splitTest.getClass() == NumericAttributeBinaryTest.class ? ((NumericAttributeBinaryTest) xBest.splitTest).getSplitValue() : null;
+        if (xBest.splitTest.getClass() == NumericAttributeBinaryTest.class) {
+            splitValue = ((NumericAttributeBinaryTest) xBest.splitTest).getSplitValue();
         }
+        else if (xBest.splitTest.getClass() == NominalAttributeBinaryTest.class) {
+            splitValue = ((NominalAttributeBinaryTest) xBest.splitTest).getValue();
+        }
+
+        successors = new Successors(isBinary, !isNominal, splitValue);
+
+        Integer splitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
+        for (int i = 0; i < xBest.numSplits(); i++) {
+            double[] j = xBest.resultingClassDistributionFromSplit(i);
+
+            if (xBest.splitTest.getClass() == NumericAttributeBinaryTest.class) {
+                CustomEFDTNode newChild = newNode(depth + 1, new DoubleVector(j), new ArrayList<>(usedNominalAttributes));
+                successors.addSuccessorNumeric(splitValue, newChild, i == 0);
+            }
+
+            else if (xBest.splitTest.getClass() == NominalAttributeBinaryTest.class) {
+                CustomEFDTNode newChild = newNode(depth + 1, new DoubleVector(j), getUsedNominalAttributesForSuccessor(splitAttribute, splitAttributeIndex));
+                if (i == 0)
+                    successors.addSuccessorNominalBinary(splitValue, newChild);
+                else
+                    successors.addDefaultSuccessorNominalBinary(newChild);
+            }
+
+            else if (xBest.splitTest.getClass() == NominalAttributeMultiwayTest.class) {
+                CustomEFDTNode newChild = newNode(depth + 1, new DoubleVector(j), getUsedNominalAttributesForSuccessor(splitAttribute, splitAttributeIndex));
+                successors.addSuccessorNominalMultiway((double) i, newChild);
+            }
+
+            else {
+                // this should never happen. check for robustness.
+                System.err.println("Error during initializeSuccessors");
+            }
+        }
+        return successors.size() == xBest.numSplits();
     }
 
-    private void setSplitAttribute(AttributeSplitSuggestion xBest, Instance instance) {
-        int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-        Attribute newSplitAttribute = instance.inputAttribute(newSplitAttributeIndex);
-        splitAttribute = newSplitAttribute;
-        splitAttributeIndex = newSplitAttributeIndex;
-        splitTest = xBest.splitTest;
+    protected void setSplitAttribute(AttributeSplitSuggestion xBest, Attribute splitAttribute, int splitAttributeIndex) {
+        this.splitAttribute = splitAttribute;
+        this.splitAttributeIndex = splitAttributeIndex;
+        splitTest = (InstanceConditionalTest) xBest.splitTest.copy();
     }
 
-    private void resetSplitAttribute() {
+    protected void resetSplitAttribute() {
         splitAttribute = null;
         splitAttributeIndex = -1;
         splitTest = null;
     }
 
-    private void killSubtree() {
+    protected void killSubtree() {
         successors = null;
     }
 
@@ -337,19 +389,19 @@ public class PlasticNode {
     }
 
     private void propagateToSuccessors(Instance instance, int totalNumInstances) {
-        Double attValue = instance.value(splitAttribute);
-        PlasticNode successor = successors.getSuccessorNode(attValue);
+        Double attValue = instance.value(modelAttIndexToInstanceAttIndex(splitAttributeIndex, instance));
+        CustomEFDTNode successor = successors.getSuccessorNode(attValue);
         if (successor == null)
             successor = addSuccessor(instance);
         if (successor != null)
-            successor.learnInstance(instance, totalNumInstances);
+        successor.learnInstance(instance, totalNumInstances);
     }
 
-    private PlasticNode addSuccessor(Instance instance) {
+    protected CustomEFDTNode addSuccessor(Instance instance) {
         List<Integer> usedNomAttributes = new ArrayList<>(usedNominalAttributes); //deep copy
-        if (splitAttribute.isNominal())
-            usedNominalAttributes.add(splitAttributeIndex);
-        PlasticNode successor = newNode(depth + 1, null, usedNomAttributes);
+//        if (splitAttribute.isNominal())
+//            usedNominalAttributes.add(splitAttributeIndex);
+        CustomEFDTNode successor = newNode(depth + 1, null, usedNomAttributes);
         double value = instance.value(splitAttribute);
         if (splitAttribute.isNominal()) {
             if (!successors.isBinary()) {
@@ -363,33 +415,35 @@ public class PlasticNode {
             }
         } else {
             if (successors.lowerIsMissing()) {
-                boolean success = successors.addSuccessorNumeric(value, successor, true);
+                boolean success = successors.addSuccessorNumeric(successors.getReferenceValue(), successor, true);
                 return success ? successor : null;
             } else if (successors.upperIsMissing()) {
-                boolean success = successors.addSuccessorNumeric(value, successor, false);
+                boolean success = successors.addSuccessorNumeric(successors.getReferenceValue(), successor, false);
                 return success ? successor : null;
             }
         }
         return null;
     }
 
-    private PlasticNode newNode(int depth, DoubleVector classDistribution, List<Integer> usedNominalAttributes) {
-        return new PlasticNode(
-                splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence,
+    protected CustomEFDTNode newNode(int depth, DoubleVector classDistribution, List<Integer> usedNominalAttributes) {
+        return new CustomEFDTNode(
+                splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence, disableBlockParentSplitAttribute,
                 leafPrediction, minSamplesReevaluate, depth, maxDepth,
                 tau, tauReevaluate, relMinDeltaG, binaryOnly, noPrePrune, nominalObserverBlueprint,
-                classDistribution, usedNominalAttributes
+                classDistribution, usedNominalAttributes, splitAttributeIndex
         );
     }
 
     private void updateObservers(Instance instance) {
-        for (int i = 0; i < instance.numAttributes() - 1; i++) { //update likelihood
+        for (int i = 0; i < instance.numInputAttributes(); i++) { //update likelihood
             int instAttIndex = modelAttIndexToInstanceAttIndex(i, instance);
+
             AttributeClassObserver obs = this.attributeObservers.get(i);
             if (obs == null) {
                 obs = instance.attribute(instAttIndex).isNominal() ? newNominalClassObserver() : newNumericClassObserver();
                 this.attributeObservers.set(i, obs);
             }
+
             obs.observeAttributeClass(instance.value(instAttIndex), (int) instance.classValue(), instance.weight());
         }
     }
@@ -405,22 +459,21 @@ public class PlasticNode {
     }
 
     protected NominalAttributeClassObserver newNominalClassObserver() {
-        return (NominalAttributeClassObserver) nominalObserverBlueprint.copy();
+        return new NominalAttributeClassObserver();
     }
 
     protected NumericAttributeClassObserver newNumericClassObserver() {
-        return (NumericAttributeClassObserver) numericObserverBlueprint.copy();
+        return new GaussianNumericAttributeClassObserver();
     }
 
-    private List<Integer> getUsedNominalAttributesForSuccessor() {
+    protected List<Integer> getUsedNominalAttributesForSuccessor(Attribute splitAttribute, Integer splitAttributeIndex) {
         List<Integer> usedNomAttributesCpy = new ArrayList<>(usedNominalAttributes); //deep copy
-        if (splitAttribute.isNumeric())
-            return usedNomAttributesCpy;
-        usedNomAttributesCpy.add(splitAttributeIndex);
+        if (splitAttribute.isNominal())
+            usedNomAttributesCpy.add(splitAttributeIndex);
         return usedNomAttributesCpy;
     }
 
-    private void updateInfogainSum(AttributeSplitSuggestion[] suggestions) {
+    void updateInfogainSum(AttributeSplitSuggestion[] suggestions) {
         for (AttributeSplitSuggestion sugg : suggestions) {
             if (sugg.splitTest != null) {
                 if (!infogainSum.containsKey((sugg.splitTest.getAttsTestDependsOn()[0]))) {
@@ -436,18 +489,17 @@ public class PlasticNode {
         }
     }
 
-    private boolean shouldSplitLeaf(AttributeSplitSuggestion[] suggestions,
-                                    double confidence,
-                                    DoubleVector observedClassDistribution
+    private boolean shouldSplitLeaf(AttributeSplitSuggestion[] suggestions
     ) {
         boolean shouldSplit = false;
         if (suggestions.length < 2) {
             shouldSplit = suggestions.length > 0;
         } else {
             double hoeffdingBound = computeHoeffdingBound(
-                    splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayCopy()),
+                    splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef()),
                     confidence,
-                    observedClassDistribution.sumOfValues()
+                    nodeTime
+//                    observedClassDistribution.sumOfValues()
             );
             AttributeSplitSuggestion bestSuggestion = suggestions[suggestions.length - 1];
 
@@ -472,7 +524,7 @@ public class PlasticNode {
                 }
                 shouldSplit = true;
             }
-            if (shouldSplit) {
+            if (shouldSplit) {  //TODO: Check why our approach degrades when we have this turned on.
                 for (Integer i : usedNominalAttributes) {
                     if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
                         shouldSplit = false;
@@ -484,22 +536,36 @@ public class PlasticNode {
         return shouldSplit;
     }
 
-    private double getCurrentSuggestionAverageMerit() {
+    double getCurrentSuggestionAverageMerit(AttributeSplitSuggestion[] suggestions) {
+        if (splitTest != null) {
+            if (splitTest instanceof NominalAttributeMultiwayTest) {
+                for (AttributeSplitSuggestion s: suggestions) {
+                    if (s.splitTest == null)
+                        continue;
+                    if (s.splitTest.getAttsTestDependsOn()[0] == splitAttributeIndex)
+                        return getSuggestionAverageMerit(s.splitTest);
+                }
+            }
+        }
         return getSuggestionAverageMerit(splitTest);
     }
 
-    private double getSuggestionAverageMerit(InstanceConditionalTest splitTest) {
+    double getSuggestionAverageMerit(InstanceConditionalTest splitTest) {
         double averageMerit;
 
-        if (splitTest == null) { // current is null- shouldn't happen, check for robustness
-            averageMerit = infogainSum.get(-1) / numSplitAttempts;
+        if (splitTest == null) {
+            averageMerit = infogainSum.get(-1) / Math.max(numSplitAttempts, 1.0);
         } else {
-            averageMerit = infogainSum.get(splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
+            Integer key = splitTest.getAttsTestDependsOn()[0];
+            if (!infogainSum.containsKey(key)) {
+                infogainSum.put(key, 0.0);
+            }
+            averageMerit = infogainSum.get(key) / Math.max(numSplitAttempts, 1.0);
         }
         return averageMerit;
     }
 
-    private int argmax(double[] array) {
+    int argmax(double[] array) {
         double max = array[0];
         int maxarg = 0;
 
@@ -513,9 +579,19 @@ public class PlasticNode {
         return maxarg;
     }
 
-    public Set<Attribute> collectChildrenSplitAttributes() {
+    public int getSubtreeDepth() {
         if (isLeaf())
-            return null;
-        Set<Attribute> childrenSplitAttributes =
+            return depth;
+        Set<Integer> succDepths = new HashSet<>();
+        for (CustomEFDTNode successor: successors.getAllSuccessors()) {
+            succDepths.add(successor.getSubtreeDepth());
+        }
+        return Collections.max(succDepths);
+    }
+
+    protected void resetStatisticsAfterSplit() {
+        numSplitAttempts = 0;
+        classDistributionAtTimeOfCreation = new DoubleVector(classDistributionAtTimeOfCreation.getArrayCopy());
+        nodeTime = 0;
     }
 }

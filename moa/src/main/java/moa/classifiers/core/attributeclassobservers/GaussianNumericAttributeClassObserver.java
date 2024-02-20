@@ -111,10 +111,8 @@ public class GaussianNumericAttributeClassObserver extends AbstractOptionHandler
         double[][] postSplitDists = getClassDistsResultingFromBinarySplit(threshold);
         double merit = criterion.getMeritOfSplit(preSplitDist,
                 postSplitDists);
-        if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
-            bestSuggestion = new AttributeSplitSuggestion(
-                    new NumericAttributeBinaryTest(attIndex, threshold, true), postSplitDists, merit);
-        }
+        bestSuggestion = new AttributeSplitSuggestion(
+                new NumericAttributeBinaryTest(attIndex, threshold, true), postSplitDists, merit);
         return bestSuggestion;
     }
 

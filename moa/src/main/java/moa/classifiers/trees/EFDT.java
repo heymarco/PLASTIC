@@ -84,7 +84,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             "reevaluationPeriod",
             'R',
             "The number of instances an internal node should observe between re-evaluation attempts.",
-            100, 0, Integer.MAX_VALUE);
+            2000, 0, Integer.MAX_VALUE);
 
     public IntOption maxByteSizeOption = new IntOption("maxByteSize", 'm',
             "Maximum memory consumed by the tree.", 33554432, 0,
@@ -516,6 +516,9 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                         node.disableAttribute(poorAtt);
                     }
                 }
+                if (shouldSplit) {
+                    System.out.println(node.nodeTime);
+                }
             }
             if (shouldSplit) {
                 splitCount++;
@@ -816,8 +819,6 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         public FoundNode filterInstanceToLeaf(Instance inst, SplitNode parent,
                                               int parentBranch) {
 
-            //System.err.println("OVERRIDING ");
-
             int childIndex = instanceChildIndex(inst);
             if (childIndex >= 0) {
                 Node child = getChild(childIndex);
@@ -970,7 +971,6 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         protected void reEvaluateBestSplit(EFDTSplitNode node, EFDTSplitNode parent,
                                            int parentIndex) {
 
-
             node.addToSplitAttempts(1);
 
             // EFDT must transfer over gain averages when replacing a node: leaf to split, split to leaf, or split to split
@@ -1025,7 +1025,6 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             if (bestSuggestion.splitTest == null) { // best is null
                 bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
             } else {
-
                 bestSuggestionAverageMerit = node.getInfogainSum().get(bestSuggestion.splitTest.getAttsTestDependsOn()[0]) / node.getNumSplitAttempts();
             }
 
@@ -1042,8 +1041,6 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
             if (deltaG > hoeffdingBound
                     || (hoeffdingBound < tieThreshold && deltaG > tieThreshold / 2)) {
-
-                System.err.println(numInstances);
 
                 AttributeSplitSuggestion splitDecision = bestSuggestion;
 

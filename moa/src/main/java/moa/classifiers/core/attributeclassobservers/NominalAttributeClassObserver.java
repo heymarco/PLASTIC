@@ -88,31 +88,30 @@ public class NominalAttributeClassObserver extends AbstractOptionHandler impleme
             boolean binaryOnly) {
         AttributeSplitSuggestion bestSuggestion = null;
         int maxAttValsObserved = getMaxAttValsObserved();
-        if (!binaryOnly) {
+//        if (!binaryOnly) {
             double[][] postSplitDists = getClassDistsResultingFromMultiwaySplit(maxAttValsObserved);
             double merit = criterion.getMeritOfSplit(preSplitDist,
                     postSplitDists);
             bestSuggestion = new AttributeSplitSuggestion(
                     new NominalAttributeMultiwayTest(attIndex), postSplitDists,
                     merit);
-        }
-        for (int valIndex = 0; valIndex < maxAttValsObserved; valIndex++) {
-            double[][] postSplitDists = getClassDistsResultingFromBinarySplit(valIndex);
-            double merit = criterion.getMeritOfSplit(preSplitDist,
-                    postSplitDists);
-            if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
-                bestSuggestion = new AttributeSplitSuggestion(
-                        new NominalAttributeBinaryTest(attIndex, valIndex),
-                        postSplitDists, merit);
-            }
-        }
+//        }
+//        for (int valIndex = 0; valIndex < maxAttValsObserved; valIndex++) {
+//            double[][] postSplitDists = getClassDistsResultingFromBinarySplit(valIndex);
+//            double merit = criterion.getMeritOfSplit(preSplitDist,
+//                    postSplitDists);
+//            if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
+//                bestSuggestion = new AttributeSplitSuggestion(
+//                        new NominalAttributeBinaryTest(attIndex, valIndex),
+//                        postSplitDists, merit);
+//            }
+//        }
         return bestSuggestion;
     }
 
     public AttributeSplitSuggestion forceSplit(
-            SplitCriterion criterion, double[] preSplitDist, int attIndex,
-            boolean binary) {
-        AttributeSplitSuggestion bestSuggestion = null;
+            SplitCriterion criterion, double[] preSplitDist, int attIndex, boolean binary, Double splitValue) {
+        AttributeSplitSuggestion bestSuggestion;
         int maxAttValsObserved = getMaxAttValsObserved();
         if (!binary) {
             double[][] postSplitDists = getClassDistsResultingFromMultiwaySplit(maxAttValsObserved);
@@ -123,16 +122,16 @@ public class NominalAttributeClassObserver extends AbstractOptionHandler impleme
                     merit);
             return bestSuggestion;
         }
-        for (int valIndex = 0; valIndex < maxAttValsObserved; valIndex++) {
-            double[][] postSplitDists = getClassDistsResultingFromBinarySplit(valIndex);
-            double merit = criterion.getMeritOfSplit(preSplitDist,
-                    postSplitDists);
-            if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
-                bestSuggestion = new AttributeSplitSuggestion(
-                        new NominalAttributeBinaryTest(attIndex, valIndex),
-                        postSplitDists, merit);
-            }
+        assert splitValue != null: "Split value is null";
+        if (splitValue >= maxAttValsObserved) {
+            return null;
         }
+        double[][] postSplitDists = getClassDistsResultingFromBinarySplit(splitValue.intValue());
+        double merit = criterion.getMeritOfSplit(preSplitDist,
+                postSplitDists);
+        bestSuggestion = new AttributeSplitSuggestion(
+                new NominalAttributeBinaryTest(attIndex, splitValue.intValue()),
+                postSplitDists, merit);
         return bestSuggestion;
     }
 

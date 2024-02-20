@@ -1,23 +1,49 @@
 package moa.classifiers.trees.plastic_util;
 
-import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
-
 import java.util.*;
 
 public class Successors {
     private Double referenceValue;
-    private HashMap<SuccessorIdentifier, PlasticNode> successors = new HashMap<>();
+    private HashMap<SuccessorIdentifier, CustomEFDTNode> successors = new HashMap<>();
 
-    public Successors(boolean isBinarySplit, boolean isNumericSplit) {
+    public Successors(Successors other, boolean transferNodes) {
+        isBinarySplit = other.isBinary();
+        isNumericSplit = !other.isNominal();
+        referenceValue = other.getReferenceValue();
+        if (transferNodes) {
+            successors = other.successors;
+        }
+    }
+
+    public Successors(boolean isBinarySplit, boolean isNumericSplit, Double splitValue) {
         this.isBinarySplit = isBinarySplit;
         this.isNumericSplit = isNumericSplit;
+        this.referenceValue = splitValue;
     }
 
     private final boolean isBinarySplit;
     private final boolean isNumericSplit;
 
 
-    public boolean addSuccessorNumeric(Double attValue, PlasticNode n, boolean isLower) {
+    protected boolean addSuccessor(CustomEFDTNode node, SuccessorIdentifier key) {
+        if (node == null)
+            return false;
+        if (isNumericSplit != key.isNumeric())
+            return false;
+        if (successors.size() >= 2 && isBinary()) {
+            return false;
+        }
+        if (successors.containsKey(key)) {
+            return false;
+        }
+        successors.put(key, node);
+        return true;
+    }
+
+
+    public boolean addSuccessorNumeric(Double attValue, CustomEFDTNode n, boolean isLower) {
+        if (n == null)
+            return false;
         if (!isNumericSplit)
             return false;
         if (successors.size() >= 2)
@@ -35,7 +61,9 @@ public class Successors {
     }
 
 
-    public boolean addSuccessorNominalBinary(Double attValue, PlasticNode n) {
+    public boolean addSuccessorNominalBinary(Double attValue, CustomEFDTNode n) {
+        if (n == null)
+            return false;
         if (isNumericSplit)
             return false;
         if (!isBinarySplit)
@@ -59,7 +87,9 @@ public class Successors {
         return true;
     }
 
-    public boolean addDefaultSuccessorNominalBinary(PlasticNode n) {
+    public boolean addDefaultSuccessorNominalBinary(CustomEFDTNode n) {
+        if (n == null)
+            return false;
         if (isNumericSplit)
             return false;
         if (!isBinarySplit)
@@ -75,7 +105,9 @@ public class Successors {
         return true;
     }
 
-    public boolean addSuccessorNominalMultiway(Double attValue, PlasticNode n) {
+    public boolean addSuccessorNominalMultiway(Double attValue, CustomEFDTNode n) {
+        if (n == null)
+            return false;
         if (isNumericSplit)
             return false;
         if (isBinarySplit)
@@ -89,11 +121,11 @@ public class Successors {
         return true;
     }
 
-    public PlasticNode getSuccessorNode(SuccessorIdentifier key) {
+    public CustomEFDTNode getSuccessorNode(SuccessorIdentifier key) {
         return successors.get(key);
     }
 
-    public PlasticNode getSuccessorNode(Double attributeValue) {
+    public CustomEFDTNode getSuccessorNode(Double attributeValue) {
         for (SuccessorIdentifier s : successors.keySet()) {
             if (s.equals(attributeValue))
                 return successors.get(s);
@@ -120,7 +152,7 @@ public class Successors {
     }
 
     public boolean contains(Object key) {
-        return successors.containsKey(key);
+        return successors.containsKey((SuccessorIdentifier) key);
     }
 
     public Double getReferenceValue() {
@@ -153,19 +185,28 @@ public class Successors {
     }
 
     public void adjustThreshold(double newThreshold) {
-        HashMap<SuccessorIdentifier, PlasticNode> newSuccessors = new HashMap<>();
+        HashMap<SuccessorIdentifier, CustomEFDTNode> newSuccessors = new HashMap<>();
         for (SuccessorIdentifier oldId: successors.keySet()) {
             SuccessorIdentifier newId = new SuccessorIdentifier(true, newThreshold, newThreshold, oldId.isLower());
             newSuccessors.put(newId, successors.get(oldId));
         }
+        referenceValue = newThreshold;
         successors = newSuccessors;
     }
 
-    public Collection<PlasticNode> getAllSuccessors() {
+    public Collection<CustomEFDTNode> getAllSuccessors() {
         return successors.values();
     }
 
     public Set<SuccessorIdentifier> getKeyset() {
         return successors.keySet();
+    }
+
+    protected void forceSuccessorForKey(SuccessorIdentifier key, CustomEFDTNode node) {
+        successors.put(key, node);
+    }
+
+    protected CustomEFDTNode removeSuccessor(SuccessorIdentifier key) {
+        return successors.remove(key);
     }
 }

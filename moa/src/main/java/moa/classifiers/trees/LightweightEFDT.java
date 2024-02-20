@@ -11,7 +11,7 @@ import moa.classifiers.MultiClassClassifier;
 import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserver;
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.classifiers.trees.plastic_util.PlasticNode;
+import moa.classifiers.trees.plastic_util.CustomEFDTNode;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
@@ -20,7 +20,7 @@ import java.util.ArrayList;
 
 public class LightweightEFDT extends AbstractClassifier implements MultiClassClassifier {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 3L;
 
     @Override
     public String getPurposeString() {
@@ -28,7 +28,7 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
     }
 
 
-    PlasticNode root;
+    CustomEFDTNode root;
     int seenItems = 0;
 
     public IntOption gracePeriodOption = new IntOption(
@@ -41,7 +41,7 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
             "reevaluationPeriod",
             'R',
             "The number of instances an internal node should observe between re-evaluation attempts.",
-            100, 0, Integer.MAX_VALUE);
+            2000, 0, Integer.MAX_VALUE);
 
     public ClassOption nominalEstimatorOption = new ClassOption("nominalEstimator",
             'd', "Nominal estimator to use.", DiscreteAttributeClassObserver.class,
@@ -55,18 +55,23 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
             "splitConfidence",
             'c',
             "The allowable error in split decision when using fixed confidence. Values closer to 0 will take longer to decide.",
-            0.001, 0.0, 1.0);
+            1e-3, 0.0, 1.0);
 
     public FloatOption adaptiveConfidenceOption = new FloatOption(
             "adaptiveSplitConfidence",
             'C',
             "The initial allowable error in split decision when using adaptive confidence. Values closer to 0 will take longer to decide.",
-            0.2, 0.0, 1.0);
+            0.1, 0.0, 1.0);
 
     public FlagOption useAdaptiveConfidenceOption = new FlagOption(
             "useAdaptiveConfidence",
             'a',
             "Flag if confidence should be adaptive (decreasing over time).");
+
+    public FlagOption disableBlockParentSplitAttribute = new FlagOption(
+            "disableBlockParentSplitAttribute",
+            'A',
+            "Flag if the split attribute of the parent should be considered during initial split of current node. By default the split attribute is blocked.");
 
     public FloatOption tieThresholdOption = new FloatOption("tieThreshold",
             't', "Threshold below which a split will be forced to break ties.",
@@ -92,19 +97,20 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
             "maxDepth",
             'D',
             "Maximum allowed depth of tree.",
-            20, 0, Integer.MAX_VALUE);
+            50, 0, Integer.MAX_VALUE);
 
     public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
             "Disable pre-pruning.");
 
 
-    PlasticNode createRoot() {
-        return new PlasticNode(
+    CustomEFDTNode createRoot() {
+        return new CustomEFDTNode(
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
                 adaptiveConfidenceOption.getValue(),
                 useAdaptiveConfidenceOption.isSet(),
+                disableBlockParentSplitAttribute.isSet(),
                 leafpredictionOption.getChosenLabel(),
                 reEvalPeriodOption.getValue(),
                 0,
@@ -116,7 +122,8 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
                 noPrePruneOption.isSet(),
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
-                new ArrayList<>()
+                new ArrayList<>(),
+                null
         );
     }
 
@@ -146,6 +153,9 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
             root = createRoot();
         root.learnInstance(inst, seenItems);
         seenItems++;
+
+//        if (seenItems % 1000 == 0)
+//            System.out.println(root.getSubtreeDepth());
     }
 
     @Override
