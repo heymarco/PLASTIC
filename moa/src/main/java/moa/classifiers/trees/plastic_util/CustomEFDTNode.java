@@ -229,14 +229,14 @@ public class CustomEFDTNode {
         AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
         updateInfogainSum(bestSuggestions);
 
-//        if (blockedAttributeIndex != null && !disableBlockParentSplitAttribute) {
-//            if (xBest.splitTest.getAttsTestDependsOn()[0] == blockedAttributeIndex) {
-//                if (bestSuggestions.length > 1) {
-//                    // don't use the blocked attribute for initial split. Use second best instead.
-//                    xBest = bestSuggestions[bestSuggestions.length - 2];
-//                }
-//            }
-//        }
+        if (blockedAttributeIndex != null && !disableBlockParentSplitAttribute) {
+            if (xBest.splitTest.getAttsTestDependsOn()[0] == blockedAttributeIndex) {
+                if (bestSuggestions.length > 1) {
+                    // don't use the blocked attribute for initial split. Use second best instead.
+                    xBest = bestSuggestions[bestSuggestions.length - 2];
+                }
+            }
+        }
 
         if (!shouldSplitLeaf(bestSuggestions))
             return;
@@ -257,10 +257,10 @@ public class CustomEFDTNode {
         numSplitAttempts++;
 
         double eps = computeHoeffdingBound(
-                splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef()),
+                splitCriterion.getRangeOfMerit(classDistributionAtTimeOfCreation.getArrayRef()),
                 currentConfidence(),
-                nodeTime
-//                observedClassDistribution.sumOfValues()
+//                nodeTime
+                observedClassDistribution.sumOfValues()
         );
 
         AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
@@ -382,16 +382,16 @@ public class CustomEFDTNode {
     private void propagateToSuccessors(Instance instance, int totalNumInstances) {
         Double attValue = instance.value(splitAttributeIndex);
         CustomEFDTNode successor = successors.getSuccessorNode(attValue);
-        if (successor == null)
-            successor = addSuccessor(instance);
+//        if (successor == null)
+//            successor = addSuccessor(instance);
         if (successor != null)
-        successor.learnInstance(instance, totalNumInstances);
+            successor.learnInstance(instance, totalNumInstances);
     }
 
     protected CustomEFDTNode addSuccessor(Instance instance) {
         List<Integer> usedNomAttributes = new ArrayList<>(usedNominalAttributes); //deep copy
-//        if (splitAttribute.isNominal())
-//            usedNominalAttributes.add(splitAttributeIndex);
+        if (splitAttribute.isNominal())
+            usedNominalAttributes.add(splitAttributeIndex);
         CustomEFDTNode successor = newNode(depth + 1, null, usedNomAttributes);
         double value = instance.value(splitAttribute);
         if (splitAttribute.isNominal()) {
@@ -489,8 +489,8 @@ public class CustomEFDTNode {
             double hoeffdingBound = computeHoeffdingBound(
                     splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef()),
                     confidence,
-                    nodeTime
-//                    observedClassDistribution.sumOfValues()
+//                    nodeTime
+                    observedClassDistribution.sumOfValues()
             );
             AttributeSplitSuggestion bestSuggestion = suggestions[suggestions.length - 1];
 
@@ -515,14 +515,14 @@ public class CustomEFDTNode {
                 }
                 shouldSplit = true;
             }
-            if (shouldSplit) {  //TODO: Check why our approach degrades when we have this turned on.
-                for (Integer i : usedNominalAttributes) {
-                    if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
-                        shouldSplit = false;
-                        break;
-                    }
-                }
-            }
+//            if (shouldSplit) {  //TODO: Check why our approach degrades when we have this turned on.
+//                for (Integer i : usedNominalAttributes) {
+//                    if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
+//                        shouldSplit = false;
+//                        break;
+//                    }
+//                }
+//            }
         }
         return shouldSplit;
     }

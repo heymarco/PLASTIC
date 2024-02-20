@@ -127,10 +127,7 @@ public class PlasticNode extends CustomEFDTNode {
     }
 
     protected void resetObservers() {
-        for (int i = 0; i < attributeObservers.size(); i++) {
-            AttributeClassObserver obs = attributeObservers.get(i).getClass() == NominalAttributeClassObserver.class ? newNominalClassObserver() : newNumericClassObserver();
-            this.attributeObservers.set(i, obs);
-        }
+        attributeObservers = new AutoExpandVector<>();
     }
 
     public boolean isArtificial() {
@@ -187,10 +184,10 @@ public class PlasticNode extends CustomEFDTNode {
         numSplitAttempts++;
 
         double eps = computeHoeffdingBound(
-                splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef()),
+                splitCriterion.getRangeOfMerit(classDistributionAtTimeOfCreation.getArrayRef()),
                 currentConfidence(),
-                nodeTime
-//                observedClassDistribution.sumOfValues()
+//                nodeTime
+                observedClassDistribution.sumOfValues()
         );
 
         AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
@@ -212,26 +209,28 @@ public class PlasticNode extends CustomEFDTNode {
                 resetSplitAttribute();
             }
             else {
-//                boolean doResplit = true;
-//                if (splitTest == xBest.splitTest && splitTest.getClass() == NumericAttributeBinaryTest.class) {
-//                    Collection<CustomEFDTNode> successorNodes = successors.getAllSuccessors();
-//                    for (CustomEFDTNode successor : successorNodes) {
-//                        if (argmax(xBest.resultingClassDistributions[0]) == argmax(successor.getObservedClassDistribution())) {
-//                            NumericAttributeBinaryTest test = (NumericAttributeBinaryTest) xBest.splitTest;
-//                            successors.adjustThreshold(test.getSplitValue());
-//                            splitTest = xBest.splitTest;
-//                            doResplit = false;
-//                            break;
-//                        }
-//                    }
-//                }
-                boolean success = false;
-                Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
-                if (maxBranchLength > 1)
-                    success = performReordering(xBest, newSplitAttribute);
-                setSplitAttribute(xBest, newSplitAttribute);
-                if (!success) {
-                    initializeSuccessors(xBest, newSplitAttribute);
+                boolean doResplit = true;
+                if (splitTest == xBest.splitTest && splitTest.getClass() == NumericAttributeBinaryTest.class) {
+                    Collection<CustomEFDTNode> successorNodes = successors.getAllSuccessors();
+                    for (CustomEFDTNode successor : successorNodes) {
+                        if (argmax(xBest.resultingClassDistributions[0]) == argmax(successor.getObservedClassDistribution())) {
+                            NumericAttributeBinaryTest test = (NumericAttributeBinaryTest) xBest.splitTest;
+                            successors.adjustThreshold(test.getSplitValue());
+                            splitTest = xBest.splitTest;
+                            doResplit = false;
+                            break;
+                        }
+                    }
+                }
+                if (doResplit) {
+                    boolean success = false;
+                    Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
+                    if (maxBranchLength > 1)
+                        success = performReordering(xBest, newSplitAttribute);
+                    setSplitAttribute(xBest, newSplitAttribute);
+                    if (!success) {
+                        initializeSuccessors(xBest, newSplitAttribute);
+                    }
                 }
             }
         }

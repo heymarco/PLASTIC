@@ -109,9 +109,8 @@ public class Restructurer {
         }
 
         for (CustomEFDTNode s1: newRoot.getSuccessors().getAllSuccessors()) {
-            if (s1.isLeaf())
-                continue;
-            finalPrune((PlasticNode) s1);
+            if (!s1.isLeaf())
+                finalPrune((PlasticNode) s1);
         }
 
         return newRoot;
@@ -363,15 +362,12 @@ public class Restructurer {
         for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
             PlasticNode s = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
             removeUnreachableSubtree(s, splitAttributeIndex, splitValue, key.isLower());
-            if (Math.abs(splitValue - oldThreshold) > acceptedThresholdDeviation) {
-                setRestructuredFlagInSubtree(s);
-            }
         }
     }
 
     private void keepSuccessorsResetSplitters(PlasticNode lastNode, int swapAttributeIndex, double splitValue) {
         PlasticNode R = lastNode;
-        R.setRestructuredFlag();
+//        R.setRestructuredFlag();
         Attribute splitAttribute = R.getSplitAttribute();
         Integer splitAttributeIndex = R.getSplitAttributeIndex();
 
@@ -590,14 +586,21 @@ public class Restructurer {
             node.observedClassDistribution = new DoubleVector();
             node.classDistributionAtTimeOfCreation = new DoubleVector();
         }
+//        else {
+//            //TODO: normalize the values (still able to predict but adaptive)
+//            for (int i = 0; i < node.observedClassDistribution.numValues(); i++) {
+//                node.observedClassDistribution.setValue(i, node.observedClassDistribution.getValue(i) / node.observedClassDistribution.sumOfValues());
+//            }
+//        }
         node.resetInfogainTracking();
         node.resetObservers();
         node.seenWeight = 0.0;
         node.nodeTime = 0;
         node.numSplitAttempts = 0;
         node.resetRestructuredFlag();
-        if (!node.isLeaf())
+        if (!node.isLeaf()) {
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
+        }
     }
 
     private void finalPrune(PlasticNode node) {
