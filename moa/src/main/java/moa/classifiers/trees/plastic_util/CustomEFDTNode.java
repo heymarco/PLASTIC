@@ -248,9 +248,8 @@ public class CustomEFDTNode {
             resetSplitAttribute();
             return;
         }
-        int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-        Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
-        setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
+        Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
+        setSplitAttribute(xBest, newSplitAttribute);
         initializeSuccessors(xBest, splitAttribute);
     }
 
@@ -279,15 +278,8 @@ public class CustomEFDTNode {
             bestMerit = infogainSum.get(xBest.splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
         }
 
-        double currentAverageMerit;
-        if (splitTest == null) { // current is null- shouldn't happen, check for robustness
-            currentAverageMerit = infogainSum.get(-1) / numSplitAttempts;
-        } else {
-            currentAverageMerit = infogainSum.get(splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
-        }
-
-//        double currentMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
-        double deltaG = bestMerit - currentAverageMerit;
+        double currentMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
+        double deltaG = bestMerit - currentMerit;
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
 
@@ -310,9 +302,8 @@ public class CustomEFDTNode {
                     }
                 }
                 if (doResplit) {
-                    int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-                    Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
-                    setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
+                    Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
+                    setSplitAttribute(xBest, newSplitAttribute);
                     initializeSuccessors(xBest, splitAttribute);
                 }
             }
@@ -335,7 +326,7 @@ public class CustomEFDTNode {
         successors = new Successors(isBinary, !isNominal, splitValue);
 
         Integer splitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-        for (int i = 0; i < xBest.numSplits(); i++) {
+        for (int i = 0; i < xBest.resultingClassDistributions.length; i++) {
             double[] j = xBest.resultingClassDistributionFromSplit(i);
 
             if (xBest.splitTest.getClass() == NumericAttributeBinaryTest.class) {
@@ -364,9 +355,9 @@ public class CustomEFDTNode {
         return successors.size() == xBest.numSplits();
     }
 
-    protected void setSplitAttribute(AttributeSplitSuggestion xBest, Attribute splitAttribute, int splitAttributeIndex) {
+    protected void setSplitAttribute(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
         this.splitAttribute = splitAttribute;
-        this.splitAttributeIndex = splitAttributeIndex;
+        this.splitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
         splitTest = (InstanceConditionalTest) xBest.splitTest.copy();
     }
 
@@ -389,7 +380,7 @@ public class CustomEFDTNode {
     }
 
     private void propagateToSuccessors(Instance instance, int totalNumInstances) {
-        Double attValue = instance.value(modelAttIndexToInstanceAttIndex(splitAttributeIndex, instance));
+        Double attValue = instance.value(splitAttributeIndex);
         CustomEFDTNode successor = successors.getSuccessorNode(attValue);
         if (successor == null)
             successor = addSuccessor(instance);
@@ -436,7 +427,7 @@ public class CustomEFDTNode {
 
     private void updateObservers(Instance instance) {
         for (int i = 0; i < instance.numInputAttributes(); i++) { //update likelihood
-            int instAttIndex = modelAttIndexToInstanceAttIndex(i, instance);
+            int instAttIndex = i;
 
             AttributeClassObserver obs = this.attributeObservers.get(i);
             if (obs == null) {

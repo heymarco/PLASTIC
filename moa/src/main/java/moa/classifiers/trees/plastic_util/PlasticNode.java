@@ -12,6 +12,7 @@ import moa.classifiers.core.conditionaltests.NumericAttributeBinaryTest;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.core.AutoExpandVector;
 import moa.core.DoubleVector;
+import org.w3c.dom.Attr;
 
 import java.util.*;
 
@@ -126,7 +127,7 @@ public class PlasticNode extends CustomEFDTNode {
     }
 
     protected void resetObservers() {
-        for (int i = 0; i < attributeObservers.size(); i++) { //update likelihood
+        for (int i = 0; i < attributeObservers.size(); i++) {
             AttributeClassObserver obs = attributeObservers.get(i).getClass() == NominalAttributeClassObserver.class ? newNominalClassObserver() : newNumericClassObserver();
             this.attributeObservers.set(i, obs);
         }
@@ -153,7 +154,7 @@ public class PlasticNode extends CustomEFDTNode {
             AttributeSplitSuggestion suggestion = nominalObserver.forceSplit(
                     splitCriterion, observedClassDistribution.getArrayCopy(), splitAttributeIndex, isBinary, splitValue
             );
-            setSplitAttribute(suggestion, splitAttribute, splitAttributeIndex);
+            setSplitAttribute(suggestion, splitAttribute);
             success = initializeSuccessors(suggestion, splitAttribute);
         }
         else {
@@ -162,7 +163,7 @@ public class PlasticNode extends CustomEFDTNode {
                     splitCriterion, observedClassDistribution.getArrayCopy(), splitAttributeIndex, splitValue
             );
             assert suggestion != null;
-            setSplitAttribute(suggestion, splitAttribute, splitAttributeIndex);
+            setSplitAttribute(suggestion, splitAttribute);
             success = initializeSuccessors(suggestion, splitAttribute);
         }
 
@@ -224,18 +225,11 @@ public class PlasticNode extends CustomEFDTNode {
 //                        }
 //                    }
 //                }
-//                if (doResplit) {
-//                    int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-//                    Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
-//                    setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
-//                    initializeSuccessors(xBest, splitAttribute);
-//                }
-                int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
-                Attribute newSplitAttribute = instance.attribute(modelAttIndexToInstanceAttIndex(newSplitAttributeIndex, instance));
                 boolean success = false;
+                Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
                 if (maxBranchLength > 1)
-                    success = performReordering(xBest, newSplitAttribute, newSplitAttributeIndex);
-                setSplitAttribute(xBest, newSplitAttribute, newSplitAttributeIndex);
+                    success = performReordering(xBest, newSplitAttribute);
+                setSplitAttribute(xBest, newSplitAttribute);
                 if (!success) {
                     initializeSuccessors(xBest, newSplitAttribute);
                 }
@@ -243,7 +237,7 @@ public class PlasticNode extends CustomEFDTNode {
         }
     }
 
-    private boolean performReordering(AttributeSplitSuggestion xBest, Attribute splitAttribute, int splitAttributeIndex) {
+    private boolean performReordering(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
         Double splitValue = null;
         InstanceConditionalTest test = xBest.splitTest;
         if (test instanceof NominalAttributeBinaryTest)
@@ -251,7 +245,7 @@ public class PlasticNode extends CustomEFDTNode {
         else if (test instanceof NumericAttributeBinaryTest)
             splitValue = ((NumericAttributeBinaryTest) test).getValue();
 
-        PlasticNode restructuredNode = restructurer.restructure(this, xBest, splitAttribute, splitAttributeIndex, splitValue);
+        PlasticNode restructuredNode = restructurer.restructure(new PlasticNode(this), xBest, splitAttribute, splitValue);
 
         if (restructuredNode != null)
             successors = restructuredNode.getSuccessors();
