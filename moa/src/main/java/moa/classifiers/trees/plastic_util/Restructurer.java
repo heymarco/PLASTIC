@@ -343,8 +343,10 @@ public class Restructurer {
         PlasticNode succ1 = (PlasticNode) node.getSuccessors().getSuccessorNode(leftKey);
         PlasticNode succ2 = (PlasticNode) node.getSuccessors().getSuccessorNode(rightKey);
         Successors newSuccessors = new Successors(true, true, splitValue);
-        newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
-        newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
+        if (succ1 != null)
+            newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
+        if (succ2 != null)
+            newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
         node.successors = newSuccessors;
 
         if (node.isLeaf())

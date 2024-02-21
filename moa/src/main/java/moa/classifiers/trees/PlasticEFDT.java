@@ -46,7 +46,8 @@ public class PlasticEFDT extends LightweightEFDT {
                 new DoubleVector(),
                 new ArrayList<>(),
                 maxBranchLengthOption.getValue(),
-                acceptedNumericThresholdDeviationOption.getValue()
+                acceptedNumericThresholdDeviationOption.getValue(),
+                -1
         );
     }
 }

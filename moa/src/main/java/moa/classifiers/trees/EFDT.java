@@ -449,20 +449,27 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             if (bestSplitSuggestions.length < 2) {
                 shouldSplit = bestSplitSuggestions.length > 0;
             } else {
-                double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
-                        this.splitConfidenceOption.getValue(), node.getWeightSeen());
+                double hoeffdingBound = computeHoeffdingBound(
+                        splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
+                        this.splitConfidenceOption.getValue(),
+                        node.getWeightSeen());
                 AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
 
                 double bestSuggestionAverageMerit;
-                double currentAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
+                double currentAverageMerit = 0.0;  // node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
 
                 // because this is an unsplit leaf. current average merit should be always zero on the null split.
 
                 if (bestSuggestion.splitTest == null) { // if you have a null split
-                    bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
+                    bestSuggestionAverageMerit = 0.0;  // node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
                 } else {
-                    bestSuggestionAverageMerit = node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
+                    bestSuggestionAverageMerit = bestSuggestion.merit; // node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
                 }
+//                if (bestSuggestion.splitTest == null) { // if you have a null split
+//                    bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
+//                } else {
+//                    bestSuggestionAverageMerit = node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
+//                }
 
                 if (bestSuggestion.merit < 1e-10) {
                     shouldSplit = false; // we don't use average here
@@ -532,6 +539,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                             node.getObservedClassDistribution(), splitDecision.numSplits());
                     ((EFDTSplitNode) newSplit).attributeObservers = node.attributeObservers; // copy the attribute observers
                     newSplit.setInfogainSum(node.getInfogainSum());  // transfer infogain history, leaf to split
+                    newSplit.numSplitAttempts = node.getNumSplitAttempts();
 
                     for (int i = 0; i < splitDecision.numSplits(); i++) {
 
@@ -991,8 +999,11 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
             //compute Hoeffding bound
             SplitCriterion splitCriterion = (SplitCriterion) getPreparedClassOption(EFDT.this.splitCriterionOption);
-            double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getClassDistributionAtTimeOfCreation()),
-                    EFDT.this.splitConfidenceOption.getValue(), node.observedClassDistribution.sumOfValues());
+            double hoeffdingBound = computeHoeffdingBound(
+                    splitCriterion.getRangeOfMerit(node.getClassDistributionAtTimeOfCreation()),
+                    EFDT.this.splitConfidenceOption.getValue(),
+                    node.observedClassDistribution.sumOfValues()
+            );
 
             // get best split suggestions
             AttributeSplitSuggestion[] bestSplitSuggestions = node.getBestSplitSuggestions(splitCriterion, EFDT.this);
@@ -1063,18 +1074,20 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
                     ((EFDTSplitNode) newSplit).attributeObservers = node.attributeObservers; // copy the attribute observers
                     newSplit.setInfogainSum(node.getInfogainSum());  // transfer infogain history, split to replacement split
+                    newSplit.numSplitAttempts = node.getNumSplitAttempts();
 
-                    if (node.splitTest == splitDecision.splitTest
-                            && node.splitTest.getClass() == NumericAttributeBinaryTest.class &&
-                            (argmax(splitDecision.resultingClassDistributions[0]) == argmax(node.getChild(0).getObservedClassDistribution())
-                                    || argmax(splitDecision.resultingClassDistributions[1]) == argmax(node.getChild(1).getObservedClassDistribution()))
-                    ) {
-                        // change split but don't destroy the subtrees
-                        for (int i = 0; i < splitDecision.numSplits(); i++) {
-                            ((EFDTSplitNode) newSplit).setChild(i, this.getChild(i));
-                        }
-
-                    } else {
+//                    if (node.splitTest == splitDecision.splitTest
+//                            && node.splitTest.getClass() == NumericAttributeBinaryTest.class &&
+//                            (argmax(splitDecision.resultingClassDistributions[0]) == argmax(node.getChild(0).getObservedClassDistribution())
+//                                    || argmax(splitDecision.resultingClassDistributions[1]) == argmax(node.getChild(1).getObservedClassDistribution()))
+//                    ) {
+//                        // change split but don't destroy the subtrees
+//                        for (int i = 0; i < splitDecision.numSplits(); i++) {
+//                            ((EFDTSplitNode) newSplit).setChild(i, this.getChild(i));
+//                        }
+//
+//                    } else {
+                    if (true) {
 
                         // otherwise, torch the subtree and split on the new best attribute.
 

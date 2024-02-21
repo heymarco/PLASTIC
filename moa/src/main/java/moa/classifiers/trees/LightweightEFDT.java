@@ -116,7 +116,8 @@ public class LightweightEFDT extends AbstractClassifier implements MultiClassCla
                 noPrePruneOption.isSet(),
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
-                new ArrayList<>()
+                new ArrayList<>(),
+                -1
         );
     }
 
