@@ -15,6 +15,7 @@ import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.classifiers.trees.EFDT;
 import moa.core.AutoExpandVector;
 import moa.core.DoubleVector;
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
 
@@ -91,7 +92,9 @@ public class CustomEFDTNode {
         this.blockedAttributeIndex = blockedAttributeIndex;
     }
 
-    public static double computeHoeffdingBound(double range, double confidence, double n) {
+    protected double computeHoeffdingBound() {
+        double range = splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayRef());
+        double n = seenWeight;
         return Math.sqrt(((range * range) * Math.log(1.0 / confidence))
                 / (2.0 * n));
     }
@@ -215,7 +218,7 @@ public class CustomEFDTNode {
         Arrays.sort(bestSuggestions);
         updateInfogainSum(bestSuggestions);
         AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
-        xBest = replaceBestSuggestionIfAttributeIsBlocked(bestSuggestions, blockedAttributeIndex);
+        xBest = replaceBestSuggestionIfAttributeIsBlocked(xBest, bestSuggestions, blockedAttributeIndex);
 
         if (!shouldSplitLeaf(bestSuggestions, currentConfidence(), observedClassDistribution))
             return;
@@ -230,9 +233,6 @@ public class CustomEFDTNode {
         setSplitAttribute(xBest, newSplitAttribute);
         initializeSuccessors(xBest, splitAttribute);
         classDistributionAtTimeOfCreation = new DoubleVector(observedClassDistribution.getArrayCopy());
-//        nodeTime = 0;
-//        seenWeight = 0.0;
-//        numSplitAttempts = 0;
     }
 
     protected void reevaluateSplit(Instance instance) {
@@ -242,51 +242,16 @@ public class CustomEFDTNode {
         Arrays.sort(bestSuggestions);
         if (bestSuggestions.length == 0)
             return;
-        updateInfogainSum(bestSuggestions);
-
-        //compute Hoeffding bound
-        double eps = computeHoeffdingBound(
-                splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayCopy()),
-                currentConfidence(),
-                nodeTime
-                );
 
         // get best split suggestions
         AttributeSplitSuggestion[] bestSplitSuggestions = getBestSplitSuggestions(splitCriterion);
         Arrays.sort(bestSplitSuggestions);
-
-        // get the best suggestion
         AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
 
-        for (AttributeSplitSuggestion bestSplitSuggestion : bestSplitSuggestions) {
-
-            if (bestSplitSuggestion.splitTest != null) {
-                if (!infogainSum.containsKey((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]))) {
-                    infogainSum.put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), 0.0);
-                }
-                double currentSum = infogainSum.get((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]));
-                infogainSum.put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), currentSum + bestSplitSuggestion.merit);
-            } else { // handle the null attribute. this is fine to do- it'll always average zero, and we will use this later to potentially burn bad splits.
-                double currentSum = infogainSum.get(-1); // null split
-                infogainSum.put(-1, currentSum + bestSplitSuggestion.merit);
-            }
-
-        }
-
-        // get the average merit for best and current splits
-
-        double bestSuggestionAverageMerit;
-        double currentAverageMerit;
-
-        if (bestSuggestion.splitTest == null) { // best is null
-            bestSuggestionAverageMerit = 0.0; // infogainSum.get(-1) / numSplitAttempts;
-        } else {
-            bestSuggestionAverageMerit = bestSuggestion.merit;  // infogainSum.get(bestSuggestion.splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
-        }
-
-        currentAverageMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
-
+        double bestSuggestionAverageMerit = bestSuggestion.splitTest == null ? 0.0 : bestSuggestion.merit;
+        double currentAverageMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
         double deltaG = bestSuggestionAverageMerit - currentAverageMerit;
+        double eps = computeHoeffdingBound();
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
             System.err.println(nodeTime);
@@ -421,8 +386,6 @@ public class CustomEFDTNode {
 
     protected CustomEFDTNode addSuccessor(Instance instance) {
         List<Integer> usedNomAttributes = new ArrayList<>(usedNominalAttributes); //deep copy
-//        if (splitAttribute.isNominal())
-//            usedNominalAttributes.add(splitAttributeIndex);
         CustomEFDTNode successor = newNode(depth + 1, null, usedNomAttributes);
         double value = instance.value(splitAttribute);
         if (splitAttribute.isNominal()) {
@@ -517,34 +480,16 @@ public class CustomEFDTNode {
         if (suggestions.length < 2) {
             shouldSplit = suggestions.length > 0;
         } else {
-            double hoeffdingBound = computeHoeffdingBound(
-                    splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayCopy()),
-                    confidence,
-                    seenWeight
-            );
             AttributeSplitSuggestion bestSuggestion = suggestions[suggestions.length - 1];
 
-            double bestSuggestionAverageMerit;
-            double currentAverageMerit = infogainSum.get(-1) / numSplitAttempts;
+            double bestSuggestionAverageMerit = bestSuggestion.merit;
+            double currentAverageMerit = 0.0;
+            double eps = computeHoeffdingBound();
 
-            // because this is an unsplit leaf. current average merit should be always zero on the null split.
-
-            if (bestSuggestion.splitTest == null) { // if you have a null split
-                bestSuggestionAverageMerit = infogainSum.get(-1) / numSplitAttempts;
-            } else {
-                bestSuggestionAverageMerit = infogainSum.get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / numSplitAttempts;
-            }
-
-            if (bestSuggestion.merit < 1e-10) {
+            shouldSplit = bestSuggestionAverageMerit - currentAverageMerit > eps || eps < tau;
+            if (bestSuggestion.merit < 1e-10)
                 shouldSplit = false; // we don't use average here
-            } else if ((bestSuggestionAverageMerit - currentAverageMerit) >
-                    hoeffdingBound
-                    || (hoeffdingBound < tau)) {
-                if (bestSuggestionAverageMerit - currentAverageMerit < hoeffdingBound) {
-                    // Placeholder to list this possibility
-                }
-                shouldSplit = true;
-            }
+
             if (shouldSplit) {  //TODO: Check why our approach degrades when we have this turned on.
                 for (Integer i : usedNominalAttributes) {
                     if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
@@ -553,37 +498,6 @@ public class CustomEFDTNode {
                     }
                 }
             }
-//            if ((this.removePoorAttsOption != null)
-//                    && this.removePoorAttsOption.isSet()) {
-//                Set<Integer> poorAtts = new HashSet<>();
-//                // scan 1 - add any poor to set
-//                for (AttributeSplitSuggestion bestSplitSuggestion : bestSplitSuggestions) {
-//                    if (bestSplitSuggestion.splitTest != null) {
-//                        int[] splitAtts = bestSplitSuggestion.splitTest.getAttsTestDependsOn();
-//                        if (splitAtts.length == 1) {
-//                            if (bestSuggestion.merit
-//                                    - bestSplitSuggestion.merit > hoeffdingBound) {
-//                                poorAtts.add(splitAtts[0]);
-//                            }
-//                        }
-//                    }
-//                }
-//                // scan 2 - remove good ones from set
-//                for (AttributeSplitSuggestion bestSplitSuggestion : bestSplitSuggestions) {
-//                    if (bestSplitSuggestion.splitTest != null) {
-//                        int[] splitAtts = bestSplitSuggestion.splitTest.getAttsTestDependsOn();
-//                        if (splitAtts.length == 1) {
-//                            if (bestSuggestion.merit
-//                                    - bestSplitSuggestion.merit < hoeffdingBound) {
-//                                poorAtts.remove(splitAtts[0]);
-//                            }
-//                        }
-//                    }
-//                }
-//                for (int poorAtt : poorAtts) {
-//                    node.disableAttribute(poorAtt);
-//                }
-//            }
         }
         return shouldSplit;
     }
@@ -655,11 +569,17 @@ public class CustomEFDTNode {
         return Collections.max(succDepths);
     }
 
-    AttributeSplitSuggestion replaceBestSuggestionIfAttributeIsBlocked(AttributeSplitSuggestion[] suggestions, int blockedAttributeIndex) {
-        if (suggestions[suggestions.length - 1].splitTest == null)
+    AttributeSplitSuggestion replaceBestSuggestionIfAttributeIsBlocked(AttributeSplitSuggestion bestSuggestion, AttributeSplitSuggestion[] suggestions, int blockedAttributeIndex) {
+        if (suggestions.length == 0)
+            return null;
+        if (bestSuggestion.splitTest == null)
+            return bestSuggestion;
+        if (suggestions.length == 1)
+            return bestSuggestion;
+        if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == blockedAttributeIndex) {
+            ArrayUtils.remove(suggestions, suggestions.length - 1);
             return suggestions[suggestions.length - 1];
-        if (suggestions[suggestions.length - 1].splitTest.getAttsTestDependsOn()[0] == blockedAttributeIndex)
-            return suggestions[suggestions.length - 2];
-        return suggestions[suggestions.length - 1];
+        }
+        return bestSuggestion;
     }
 }

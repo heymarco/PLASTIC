@@ -235,51 +235,14 @@ public class PlasticNode extends CustomEFDTNode {
             return;
         updateInfogainSum(bestSuggestions);
 
-        //compute Hoeffding bound
-        double eps = computeHoeffdingBound(
-                splitCriterion.getRangeOfMerit(observedClassDistribution.getArrayCopy()),
-                currentConfidence(),
-                nodeTime
-        );
-
-        // get best split suggestions
         AttributeSplitSuggestion[] bestSplitSuggestions = getBestSplitSuggestions(splitCriterion);
         Arrays.sort(bestSplitSuggestions);
-
-        // get the best suggestion
         AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
 
-
-        for (AttributeSplitSuggestion bestSplitSuggestion : bestSplitSuggestions) {
-
-            if (bestSplitSuggestion.splitTest != null) {
-                if (!infogainSum.containsKey((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]))) {
-                    infogainSum.put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), 0.0);
-                }
-                double currentSum = infogainSum.get((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]));
-                infogainSum.put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), currentSum + bestSplitSuggestion.merit);
-            } else { // handle the null attribute. this is fine to do- it'll always average zero, and we will use this later to potentially burn bad splits.
-                double currentSum = infogainSum.get(-1); // null split
-                infogainSum.put(-1, currentSum + bestSplitSuggestion.merit);
-            }
-
-        }
-
-        // get the average merit for best and current splits
-
-        double bestSuggestionAverageMerit;
-        double currentAverageMerit;
-
-        if (bestSuggestion.splitTest == null) { // best is null
-            bestSuggestionAverageMerit = 0.0; // infogainSum.get(-1) / numSplitAttempts;
-        } else {
-            bestSuggestionAverageMerit = bestSuggestion.merit;  // infogainSum.get(bestSuggestion.splitTest.getAttsTestDependsOn()[0]) / numSplitAttempts;
-        }
-
-
-        currentAverageMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
-
+        double bestSuggestionAverageMerit = bestSuggestion.splitTest == null ? 0.0 : bestSuggestion.merit;
+        double currentAverageMerit = getCurrentSuggestionAverageMerit(bestSuggestions);
         double deltaG = bestSuggestionAverageMerit - currentAverageMerit;
+        double eps = computeHoeffdingBound();
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
 //            System.err.println(nodeTime);
