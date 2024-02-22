@@ -18,7 +18,7 @@ import moa.options.ClassOption;
 
 import java.util.ArrayList;
 
-public class LightweightEFDT extends AbstractClassifier implements MultiClassClassifier {
+public class CustomEFDT extends AbstractClassifier implements MultiClassClassifier {
 
     private static final long serialVersionUID = 3L;
 
