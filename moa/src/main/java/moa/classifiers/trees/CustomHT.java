@@ -12,19 +12,20 @@ import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserv
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.classifiers.trees.plastic_util.CustomEFDTNode;
+import moa.classifiers.trees.plastic_util.CustomHTNode;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
 
 import java.util.ArrayList;
 
-public class CustomEFDT extends AbstractClassifier implements MultiClassClassifier {
+public class CustomHT extends AbstractClassifier implements MultiClassClassifier {
 
     private static final long serialVersionUID = 3L;
 
     @Override
     public String getPurposeString() {
-        return "Lightweight Implementation of EFDT";
+        return "Lightweight Implementation of HT";
     }
 
 
@@ -35,12 +36,6 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
             "gracePeriod",
             'g',
             "The number of instances a leaf should observe between split attempts.",
-            200, 0, Integer.MAX_VALUE);
-
-    public IntOption reEvalPeriodOption = new IntOption(
-            "reevaluationPeriod",
-            'R',
-            "The number of instances an internal node should observe between re-evaluation attempts.",
             200, 0, Integer.MAX_VALUE);
 
     public ClassOption nominalEstimatorOption = new ClassOption("nominalEstimator",
@@ -72,14 +67,6 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
             't', "Threshold below which a split will be forced to break ties.",
             0.05, 0.0, 1.0);
 
-    public FloatOption tieThresholdReevalOption = new FloatOption("tieThresholdReevaluation",
-            'T', "Threshold below which a split will be forced to break ties during reevaluation.",
-            0.05, 0.0, 1.0);
-
-    public FloatOption relMinDeltaG = new FloatOption("relMinDeltaG",
-            'G', "Relative minimum information gain to split a tie during reevaluation.",
-            0.5, 0.0, 1.0);
-
     public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             "Only allow binary splits.");
 
@@ -99,19 +86,16 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
 
 
     CustomEFDTNode createRoot() {
-        return new CustomEFDTNode(
+        return new CustomHTNode(
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
                 adaptiveConfidenceOption.getValue(),
                 useAdaptiveConfidenceOption.isSet(),
                 leafpredictionOption.getChosenLabel(),
-                reEvalPeriodOption.getValue(),
                 0,
                 maxDepthOption.getValue(),
                 tieThresholdOption.getValue(),
-                tieThresholdReevalOption.getValue(),
-                relMinDeltaG.getValue(),
                 binarySplitsOption.isSet(),
                 noPrePruneOption.isSet(),
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),

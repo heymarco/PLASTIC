@@ -9,7 +9,7 @@ import moa.core.DoubleVector;
 
 import java.util.ArrayList;
 
-public class PlasticEFDT extends CustomEFDT {
+public class PLASTIC extends CustomEFDT {
 
     public IntOption maxBranchLengthOption = new IntOption(
             "maxBranchLength",
@@ -21,7 +21,7 @@ public class PlasticEFDT extends CustomEFDT {
             'Z', "The accepted deviation between the current numeric threshold of a node and the desired threshold. If the absolute difference is smaller, we keep the successors and simply adjust the threshold.",
             0.05, 0.0, 1_000_000.0);
 
-    public PlasticEFDT() {
+    public PLASTIC() {
         super();
         // Place to override options from EFDT
         relMinDeltaG = new FloatOption("relMinDeltaG",

@@ -55,7 +55,8 @@ public class SuccessorIdentifier implements Comparable<SuccessorIdentifier> {
         else {
             boolean result = Objects.equals(selectorValue, that);
             if (!result) {
-                result = Objects.equals(selectorValue, DEFAULT_NOMINAL_VALUE);
+                // use the default successor if the reference value is not `that` and the selector value is the selectorvalue of the default successor
+                result = Objects.equals(selectorValue, DEFAULT_NOMINAL_VALUE) && !Objects.equals(referenceValue, that);
             }
             return result;
         }
@@ -78,6 +79,8 @@ public class SuccessorIdentifier implements Comparable<SuccessorIdentifier> {
             return isLower ? -1 : 1;
         }
         else {
+            if (selectorValue == null) // this can only happen in the case of a dummy split (which will be pruned after reordering)
+                return 0;
             if (selectorValue == DEFAULT_NOMINAL_VALUE || other.selectorValue == DEFAULT_NOMINAL_VALUE)
                 return referenceValue == DEFAULT_NOMINAL_VALUE ? 1 : -1;
             if (selectorValue.equals(other.selectorValue))
@@ -88,11 +91,11 @@ public class SuccessorIdentifier implements Comparable<SuccessorIdentifier> {
         }
     }
 
-    public double getSelectorValue() {
+    public Double getSelectorValue() {
         return selectorValue;
     }
 
-    public double getReferencevalue() {
+    public Double getReferencevalue() {
         return referenceValue;
     }
 

@@ -11,7 +11,7 @@ public class Successors {
         isNumericSplit = !other.isNominal();
         referenceValue = other.getReferenceValue();
         if (transferNodes) {
-            successors = other.successors;
+            successors = new HashMap<>(other.successors);
         }
     }
 

@@ -88,24 +88,24 @@ public class NominalAttributeClassObserver extends AbstractOptionHandler impleme
             boolean binaryOnly) {
         AttributeSplitSuggestion bestSuggestion = null;
         int maxAttValsObserved = getMaxAttValsObserved();
-//        if (!binaryOnly) {
+        if (!binaryOnly) {
             double[][] postSplitDists = getClassDistsResultingFromMultiwaySplit(maxAttValsObserved);
             double merit = criterion.getMeritOfSplit(preSplitDist,
                     postSplitDists);
             bestSuggestion = new AttributeSplitSuggestion(
                     new NominalAttributeMultiwayTest(attIndex), postSplitDists,
                     merit);
-//        }
-//        for (int valIndex = 0; valIndex < maxAttValsObserved; valIndex++) {
-//            double[][] postSplitDists = getClassDistsResultingFromBinarySplit(valIndex);
-//            double merit = criterion.getMeritOfSplit(preSplitDist,
-//                    postSplitDists);
-//            if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
-//                bestSuggestion = new AttributeSplitSuggestion(
-//                        new NominalAttributeBinaryTest(attIndex, valIndex),
-//                        postSplitDists, merit);
-//            }
-//        }
+        }
+        for (int valIndex = 0; valIndex < maxAttValsObserved; valIndex++) {
+            double[][] postSplitDists = getClassDistsResultingFromBinarySplit(valIndex);
+            double merit = criterion.getMeritOfSplit(preSplitDist,
+                    postSplitDists);
+            if ((bestSuggestion == null) || (merit > bestSuggestion.merit)) {
+                bestSuggestion = new AttributeSplitSuggestion(
+                        new NominalAttributeBinaryTest(attIndex, valIndex),
+                        postSplitDists, merit);
+            }
+        }
         return bestSuggestion;
     }
 

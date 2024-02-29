@@ -1,7 +1,11 @@
 package moa.classifiers.trees.plastic_util;
 
+import com.yahoo.labs.samoa.instances.Attribute;
 import moa.classifiers.core.attributeclassobservers.AttributeClassObserver;
 import moa.core.AutoExpandVector;
+import moa.core.DoubleVector;
+
+import java.util.LinkedList;
 
 public class PlasticTreeElement {
     private PlasticNode node;

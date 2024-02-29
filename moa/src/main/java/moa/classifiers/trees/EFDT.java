@@ -523,9 +523,9 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                         node.disableAttribute(poorAtt);
                     }
                 }
-                if (shouldSplit) {
-                    System.out.println(node.nodeTime);
-                }
+//                if (shouldSplit) {
+//                    System.out.println(node.nodeTime);
+//                }
             }
             if (shouldSplit) {
                 splitCount++;

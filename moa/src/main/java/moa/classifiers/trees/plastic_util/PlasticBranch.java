@@ -1,8 +1,9 @@
 package moa.classifiers.trees.plastic_util;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class PlasticBranch {
+public class PlasticBranch implements Comparable<PlasticBranch> {
     private LinkedList<PlasticTreeElement> branch = new LinkedList<>();
 
     public PlasticBranch(){}
@@ -43,5 +44,20 @@ public class PlasticBranch {
             cpy.getBranchRef().add(item.copy());
         }
         return cpy;
+    }
+
+    public ArrayList<PlasticTreeElement> branchArrayCpy() {
+        return new ArrayList<>(branch);
+    }
+
+    public int compareTo(PlasticBranch other)
+    {
+        int a = branch.getLast().getNode().observedClassDistribution.numValues();
+        int b = other.branch.getLast().getNode().observedClassDistribution.numValues();
+        if (a < b)
+            return -1;
+        if (a == b)
+            return 0;
+        return 1;
     }
 }

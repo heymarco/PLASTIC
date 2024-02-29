@@ -3,6 +3,8 @@ package moa.classifiers.trees.plastic_util;
 import com.yahoo.labs.samoa.instances.Attribute;
 import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
+import moa.classifiers.core.conditionaltests.NominalAttributeBinaryTest;
+import moa.classifiers.core.conditionaltests.NominalAttributeMultiwayTest;
 import moa.core.DoubleVector;
 
 import java.util.*;
@@ -18,7 +20,7 @@ public class Restructurer {
     }
 
     public PlasticNode restructure(PlasticNode node, AttributeSplitSuggestion suggestion, Attribute splitAttribute, Double splitValue) {
-        boolean isBinary = suggestion.resultingClassDistributions.length == 1;
+        boolean isBinary = !(suggestion.splitTest instanceof NominalAttributeMultiwayTest);
         int splitAttributeIndex = suggestion.splitTest.getAttsTestDependsOn()[0];
 
         boolean checkSucceeds = checkPreconditions(node, splitAttribute, splitValue, isBinary);
@@ -31,30 +33,40 @@ public class Restructurer {
                 return node;
         }
 
-        if (node.splitAttribute.isNumeric()) {
+        if (node.splitAttribute.isNumeric() && splitAttribute.isNumeric()) {
+            assert splitValue != null;
             Double currentSplitValue = node.getSuccessors().getReferenceValue();
-            if (node.splitAttribute == splitAttribute && !currentSplitValue.equals(splitValue)) {
-                updateThreshold(node, splitAttributeIndex, splitValue);
-//                keepSuccessorsResetSplitters(node, splitAttributeIndex, splitValue);
+            if (node.splitAttribute == splitAttribute) {
+                if (!currentSplitValue.equals(splitValue))
+                    updateThreshold(node, splitAttributeIndex, splitValue);
                 return node;
             }
         }
 
+//        for (CustomEFDTNode s1: node.getSuccessors().getAllSuccessors()) {
+//            if (s1.isLeaf())
+//                continue;
+//            initialPrune((PlasticNode) s1);
+//        }
+
         node.collectChildrenSplitAttributes();
 
-        LinkedList<PlasticBranch> mappedTree = mapTree(node, splitAttribute, splitAttributeIndex);
-        if (mappedTree == null)
-            return null;
+        MappedTree mappedTree = new MappedTree(node, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
 
-        expandMappedTree(mappedTree, splitAttribute, splitAttributeIndex, splitValue);
-        LinkedList<PlasticBranch> finalBranches = new LinkedList<>();
-        for (PlasticBranch branch: mappedTree) {
-            finalBranches.addAll(decoupleLastNode(branch));
-        }
+//        LinkedList<PlasticBranch> mappedTree = mapTree(node, splitAttribute, splitValue, splitAttributeIndex);
+//        if (mappedTree == null)
+//            return null;
 
-        modifyMappedTree(finalBranches, splitAttribute);
+//        expandMappedTree(mappedTree, splitAttribute, splitAttributeIndex, splitValue);
+//        LinkedList<PlasticBranch> finalBranches = new LinkedList<>();
+//        for (PlasticBranch branch: mappedTree) {
+//            finalBranches.addAll(decoupleLastNode(branch));
+//        }
 
-        PlasticNode newRoot = reassembleTree(finalBranches);
+//        modifyMappedTree(finalBranches, splitAttribute);
+
+        PlasticNode newRoot = reassembleTree(mappedTree);
+//        PlasticNode newRoot = reassembleTree(finalBranches);
         // skip step 5 in python
         // skip step 6 in python
 
@@ -62,14 +74,17 @@ public class Restructurer {
 //            System.out.println(branch.getDescription());
 //        }
 
+//        System.out.println(mappedTree.size());
+
         newRoot.splitAttribute = splitAttribute;
         newRoot.splitAttributeIndex = splitAttributeIndex;
+        newRoot.setSplitTest(suggestion.splitTest);
         newRoot.updateUsedNominalAttributesInSubtree(splitAttribute, splitAttributeIndex);
         newRoot.getSuccessors().getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
 
         int i = 0;
-        ArrayList<SuccessorIdentifier> sortedKeys = new ArrayList<>(newRoot.getSuccessors().getKeyset());
-        Collections.sort(sortedKeys);
+        Set<SuccessorIdentifier> sortedKeys = newRoot.getSuccessors().getKeyset();
+//        Collections.sort(sortedKeys);
         for (SuccessorIdentifier key: sortedKeys) {
             CustomEFDTNode successor = newRoot.getSuccessors().getSuccessorNode(key);
             if (splitAttribute.isNominal()) {
@@ -101,12 +116,7 @@ public class Restructurer {
             i++;
         }
 
-        for (CustomEFDTNode s1: newRoot.getSuccessors().getAllSuccessors()) {
-            if (s1.isLeaf())
-                continue;
-            finalPrune((PlasticNode) s1);
-        }
-
+        finalPrune(node);
         return newRoot;
     }
 
@@ -114,15 +124,17 @@ public class Restructurer {
         if (node.isLeaf())
             return false;
         if (splitAttribute.isNominal()) {
-            if (splitAttribute == node.splitAttribute && !isBinary)
-                return false;
-        }
-        else {
-            assert splitValue != null;
-            if (node.splitAttribute.isNumeric()) {
-                Double currentSplitValue = node.getSuccessors().getReferenceValue();
-                if (node.splitAttribute == splitAttribute && currentSplitValue.equals(splitValue))
-                    return false;
+            if (node.getSplitTest() instanceof NominalAttributeBinaryTest && isBinary) {
+                if (
+                        ((NominalAttributeBinaryTest) node.getSplitTest()).getValue() == splitValue
+                                && splitAttribute == node.splitAttribute
+                ) {
+                    System.err.println("This should never be triggered. A binary re-split with the same attribute and split value should never happen");
+                }
+            }
+            else if (node.getSplitTest() instanceof NominalAttributeMultiwayTest) {
+                if (splitAttribute == node.splitAttribute && !isBinary)
+                    System.err.println("This should never be triggered. A multiway re-split on the same nominal attribute should never happen");
             }
         }
         return true;
@@ -172,20 +184,21 @@ public class Restructurer {
         LinkedList<PlasticBranch> branches,
         Attribute swapAttribute,
         int swapAttributeIndex,
+        Double splitValue,
         int maxBranchLength
     ) {
         LinkedList<PlasticBranch> newBranches = new LinkedList<>();
 
         boolean allFinished = true;
         for (PlasticBranch branch: branches) {
-            allFinished &= getEndConditionForBranch(branch, swapAttribute, maxBranchLength);
+            allFinished &= getEndConditionForBranch(branch, swapAttribute, swapAttributeIndex, splitValue, maxBranchLength);
         }
         if (allFinished)
             return branches;
 
         for (PlasticBranch branch: branches) {
             PlasticBranch linkedBranch = (PlasticBranch) branch;
-            boolean branchIsFinished = getEndConditionForBranch(branch, swapAttribute, maxBranchLength);
+            boolean branchIsFinished = getEndConditionForBranch(branch, swapAttribute, swapAttributeIndex, splitValue, maxBranchLength);
             if (branchIsFinished) {
                 newBranches.add(branch); // keep the branch as it is
                 continue;
@@ -198,10 +211,10 @@ public class Restructurer {
                 newBranches.add(extendedBranch);
             }
         }
-        return mapBranches(newBranches, swapAttribute, swapAttributeIndex, maxBranchLength);
+        return mapBranches(newBranches, swapAttribute, swapAttributeIndex, splitValue, maxBranchLength);
     }
 
-    private boolean getEndConditionForBranch(PlasticBranch branch, Attribute swapAttribute, int maxBranchLength) {
+    private boolean getEndConditionForBranch(PlasticBranch branch, Attribute swapAttribute, int swapAttributeIndex, Double splitValue, int maxBranchLength) {
         CustomEFDTNode lastNodeOfBranch = branch.getLast().getNode();
         boolean isSwapAttribute = lastNodeOfBranch.getSplitAttribute() == swapAttribute;
         boolean isLeaf = lastNodeOfBranch.isLeaf();
@@ -215,16 +228,17 @@ public class Restructurer {
                 break;
             }
         }
-        if (swapAttributeInChildren)
-            return false;
-        return branch.getBranchRef().size() == maxBranchLength;
+        return !swapAttributeInChildren;
+//        if (swapAttributeInChildren)
+//            return false;
+//        return branch.getBranchRef().size() >= maxBranchLength;
     }
 
-    private LinkedList<PlasticBranch> mapTree(PlasticNode root, Attribute swapAttribute, int swapAttributeIndex) {
+    private LinkedList<PlasticBranch> mapTree(PlasticNode root, Attribute swapAttribute, Double splitValue, int swapAttributeIndex) {
         LinkedList<PlasticBranch> initialBranches = disconnectRoot(root);
         if (initialBranches == null)
             return null;
-        return mapBranches(initialBranches, swapAttribute, swapAttributeIndex, maxBranchLength);
+        return mapBranches(initialBranches, swapAttribute, swapAttributeIndex, splitValue, maxBranchLength);
     }
 
     private void modifyMappedTree(LinkedList<PlasticBranch> mappedTree, Attribute swapAttribute) {
@@ -236,48 +250,99 @@ public class Restructurer {
                                     int swapAttributeIndex,
                                     Double splitValue) {
         PlasticNode lastNode = branch.getLast().getNode();
-        boolean forceSplit = lastNode.isLeaf();
-        forceSplit |= lastNode.getSplitAttribute() != swapAttribute;
 
-        if (
-                !lastNode.isLeaf()
-                && lastNode.getSplitAttribute().isNominal()
-                && lastNode.getSuccessors().isBinary()
-                && splitValue != null
-        ) {
-            Double currentSplitValue = lastNode.getSuccessors().getReferenceValue();
-            boolean rightAttributeWrongValue = lastNode.getSplitAttribute() == swapAttribute && !Objects.equals(currentSplitValue, splitValue);
-            if (rightAttributeWrongValue) {
-                //TODO: we might be able to just keep everything if we have a binary nominal split
-                Successors lastNodeSuccessors = lastNode.getSuccessors();
-                Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
-                int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
-                InstanceConditionalTest splitTest = lastNode.getSplitTest();
-                lastNode.forceSplit(
-                        swapAttribute,
-                        swapAttributeIndex,
-                        splitValue,
-                        true
-                );
-                PlasticNode defaultSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(SuccessorIdentifier.DEFAULT_NOMINAL_VALUE);
-                defaultSuccessor.transferSplit(
-                        lastNodeSuccessors, lastNodeSplitAttribute, lastNodeSplitAttributeIndex, splitTest
-                );
-                return;
-            }
-        }
-        if (forceSplit) {
+        boolean shouldBeBinary = splitValue != null;
+        boolean splitAttributesMatch = lastNode.splitAttribute == swapAttribute;
+
+        if (lastNode.isLeaf() || !splitAttributesMatch) { // Option 1: the split attributes don't match
             lastNode.forceSplit(
                     swapAttribute,
                     swapAttributeIndex,
                     splitValue,
-                    splitValue != null
+                    shouldBeBinary
             );
             if (lastNode.isLeaf()) {
                 System.out.println("Error");
             }
             lastNode.successors.getAllSuccessors().forEach(s -> ((PlasticNode) s).setIsArtificial());
+            return;
         }
+
+        boolean isBinary = lastNode.successors.isBinary();
+
+        if (!isBinary && !shouldBeBinary) // Option 2: the split attributes match and the splits are multiway (this is really the best case possible)
+            // do nothing
+            return;
+
+        if (isBinary && shouldBeBinary) { // Option 3: the split attributes match and also both splits should be binary
+            if (splitValue.equals(lastNode.successors.getReferenceValue()))
+                // do nothing
+                return;
+            //TODO: we might be able to just keep everything if we have a binary nominal split
+            SuccessorIdentifier defaultKey = new SuccessorIdentifier(false, splitValue, -1.0, false);
+            Successors lastNodeSuccessors = new Successors(lastNode.getSuccessors(), true);
+            PlasticNode oldDefaultSuccessor = (PlasticNode) lastNodeSuccessors.getSuccessorNode(defaultKey);
+
+            Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
+            int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
+            InstanceConditionalTest splitTest = lastNode.getSplitTest();
+            lastNode.successors = null;
+            lastNode.forceSplit(
+                    swapAttribute,
+                    swapAttributeIndex,
+                    splitValue,
+                    shouldBeBinary
+            );
+            PlasticNode defaultSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(SuccessorIdentifier.DEFAULT_NOMINAL_VALUE);
+            defaultSuccessor.transferSplit(
+                    lastNodeSuccessors, lastNodeSplitAttribute, lastNodeSplitAttributeIndex, splitTest
+            );
+            return;
+        }
+
+        if (!isBinary && shouldBeBinary) { // Option 4: The split attributes match and the current split is multiway while the old one was binary. In this case, we do something similar to the numeric splits
+            //TODO: we might be able to just keep everything if we have a binary nominal split
+            SuccessorIdentifier defaultKey = new SuccessorIdentifier(false, splitValue, -1.0, false);
+            Successors lastNodeSuccessors = new Successors(lastNode.getSuccessors(), true);
+            PlasticNode oldDefaultSuccessor = (PlasticNode) lastNodeSuccessors.getSuccessorNode(defaultKey);
+
+            Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
+            int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
+            InstanceConditionalTest splitTest = lastNode.getSplitTest();
+            lastNode.successors = null;
+            lastNode.forceSplit(
+                    swapAttribute,
+                    swapAttributeIndex,
+                    splitValue,
+                    shouldBeBinary
+            );
+            PlasticNode defaultSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(SuccessorIdentifier.DEFAULT_NOMINAL_VALUE);
+            defaultSuccessor.transferSplit(
+                    lastNodeSuccessors, lastNodeSplitAttribute, lastNodeSplitAttributeIndex, splitTest
+            );
+            return;
+        }
+
+        if (isBinary && !shouldBeBinary) { // Option 5: The split is binary but should be multiway. In this case, we force the split and then use the old subtree of the left branch of the old subtree.
+            SuccessorIdentifier keyToPreviousSuccessor = new SuccessorIdentifier(false, splitValue, splitValue, false);
+            PlasticNode previousSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(keyToPreviousSuccessor);
+
+            lastNode.successors = new Successors(shouldBeBinary, false, splitValue);
+            lastNode.splitAttribute = swapAttribute;
+            lastNode.splitAttributeIndex = swapAttributeIndex;
+
+//            lastNode.successors = null;
+//            lastNode.forceSplit(
+//                    swapAttribute,
+//                    swapAttributeIndex,
+//                    splitValue,
+//                    shouldBeBinary
+//            );
+//            lastNode.successors.removeSuccessor(keyToPreviousSuccessor);
+            lastNode.successors.addSuccessor(previousSuccessor, keyToPreviousSuccessor);
+            return;
+        }
+
         else if (lastNode.isLeaf()) {
             System.out.println("Do nothing");
         }
@@ -290,8 +355,7 @@ public class Restructurer {
         assert splitValue != null;
         PlasticNode lastNode = branch.getLast().getNode();
         SuccessorIdentifier lastSuccessorId = branch.getLast().getKey();
-        boolean forceSplit = lastNode.isLeaf();
-        forceSplit |= lastNode.splitAttribute != swapAttribute;
+        boolean forceSplit = lastNode.isLeaf() || lastNode.splitAttribute != swapAttribute;
 
         if (forceSplit) {
             lastNode.forceSplit(
@@ -309,13 +373,16 @@ public class Restructurer {
             return; // do nothing
 
 //        if (Math.abs(splitValue - oldThreshold) < acceptedThresholdDeviation) {
+//            System.out.println("Adjust threshold in subtree node");
 //            SuccessorIdentifier leftKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, true);
 //            SuccessorIdentifier rightKey = new SuccessorIdentifier(true, oldThreshold, oldThreshold, false);
 //            PlasticNode succ1 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(leftKey);
 //            PlasticNode succ2 = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(rightKey);
 //            Successors newSuccessors = new Successors(true, true, splitValue);
-//            newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
-//            newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
+//            if (succ1 != null)
+//                newSuccessors.addSuccessorNumeric(splitValue, succ1, true);
+//            if (succ2 != null)
+//                newSuccessors.addSuccessorNumeric(splitValue, succ2, false);
 //            lastNode.successors = newSuccessors;
 //            return;
 //        }
@@ -355,9 +422,10 @@ public class Restructurer {
         for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
             PlasticNode s = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
             removeUnreachableSubtree(s, splitAttributeIndex, splitValue, key.isLower());
-            if (Math.abs(splitValue - oldThreshold) <= acceptedThresholdDeviation) {
-                setRestructuredFlagInSubtree(s);
-            }
+        }
+
+        if (Math.abs(splitValue - oldThreshold) > acceptedThresholdDeviation) {
+            setRestructuredFlagInSubtree(node);
         }
     }
 
@@ -527,7 +595,11 @@ public class Restructurer {
     private void putLastElementToFront(PlasticBranch branch, Attribute splitAttribute) {
         PlasticTreeElement oldFirstBranchElement = branch.getBranchRef().getFirst();
         PlasticTreeElement newFirstBranchElement = branch.getBranchRef().remove(branch.getBranchRef().size() - 2);
+
         branch.getBranchRef().addFirst(newFirstBranchElement);
+        if (splitAttribute != newFirstBranchElement.getNode().splitAttribute) {
+            System.out.println(branch.getDescription());
+        }
 
         PlasticNode oldFirstNode = oldFirstBranchElement.getNode();
         PlasticNode newFirstNode = newFirstBranchElement.getNode();
@@ -542,6 +614,7 @@ public class Restructurer {
         if (mappedTree.size() == 0) {
             System.out.println("MappedTree is empty");
         }
+
         PlasticNode root = mappedTree.getFirst().getBranchRef().getFirst().getNode();
         for (PlasticBranch branch: mappedTree) {
             PlasticNode currentNode = root;
@@ -550,6 +623,44 @@ public class Restructurer {
             for (PlasticTreeElement thisElement: branch.getBranchRef()) {
                 if (depth == branch.getBranchRef().size() - 1)
                     break;
+
+                PlasticNode thisNode = thisElement.getNode();
+                SuccessorIdentifier thisKey = thisElement.getKey();
+                if (currentNode.getSplitAttribute() == thisNode.getSplitAttribute()) {
+                    if (currentNode.getSuccessors().contains(thisKey)) {
+                        currentNode = (PlasticNode) currentNode.getSuccessors().getSuccessorNode(thisKey);
+                    }
+                    else {
+                        PlasticNode newSuccessor = branch.getBranchRef().get(depth + 1).getNode();
+                        boolean success = currentNode.getSuccessors().addSuccessor(newSuccessor, thisKey);
+                        assert success;
+                        currentNode = newSuccessor;
+                    }
+                }
+                depth++;
+            }
+        }
+        return root;
+    }
+
+    private PlasticNode reassembleTree(MappedTree mappedTree) {
+        if (!mappedTree.hasNext()) {
+            System.out.println("MappedTree is empty");
+        }
+
+        PlasticNode root = null;
+        while (mappedTree.hasNext()) {
+            PlasticBranch branch = mappedTree.next();
+            if (root == null)
+                root = branch.getBranchRef().getFirst().getNode();
+
+            PlasticNode currentNode = root;
+
+            int depth = 0;
+            for (PlasticTreeElement thisElement: branch.getBranchRef()) {
+                if (depth == branch.getBranchRef().size() - 1)
+                    break;
+
                 PlasticNode thisNode = thisElement.getNode();
                 SuccessorIdentifier thisKey = thisElement.getKey();
                 if (currentNode.getSplitAttribute() == thisNode.getSplitAttribute()) {
@@ -577,61 +688,101 @@ public class Restructurer {
     }
 
     private void cleanupSubtree(PlasticNode node) {
-        if (node.getRestructuredFlag()) {
-            if (!node.isLeaf()) {
-                node.observedClassDistribution = new DoubleVector();
-                node.classDistributionAtTimeOfCreation = new DoubleVector();
-            }
-            node.resetInfogainTracking();
-            node.resetObservers();
-            node.seenWeight = 0.0;
-            node.nodeTime = 0;
-            node.numSplitAttempts = 0;
-            node.resetRestructuredFlag();
+        if (!node.getRestructuredFlag())
+            return;
+        if (!node.isLeaf()) {
+            node.observedClassDistribution = new DoubleVector();
+            node.classDistributionAtTimeOfCreation = new DoubleVector();
         }
+        node.resetObservers();
+        node.seenWeight = 0.0;
+        node.nodeTime = 0;
+        node.numSplitAttempts = 0;
         if (!node.isLeaf())
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
     }
 
-    private void finalPrune(PlasticNode node) {
+    private void initialPrune(PlasticNode node) {
+        if (!node.getRestructuredFlag()) {
+            return;
+        }
+        node.resetRestructuredFlag();
         if (node.isLeaf())
             return;
+
         Set<SuccessorIdentifier> keys = new HashSet<>(node.getSuccessors().getKeyset());
-
-        for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
-            PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
-            collectStats(successor);
-        }
-
-        for (SuccessorIdentifier key: keys) {
+        for (SuccessorIdentifier key : keys) {
             PlasticNode thisNode = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
-            if (thisNode.isDummy() || thisNode.isArtificial()) {
+            if (thisNode.isArtificial() && thisNode.isLeaf()) {
                 node.getSuccessors().removeSuccessor(key);
+            }
+            else {
+                node.setIsArtificial(false);
             }
         }
 
-        if (node.getSuccessors().size() == 0) {
+        if (node.isLeaf()) {
             node.killSubtree();
             node.resetSplitAttribute();
             return;
         }
-        for (SuccessorIdentifier key: node.getSuccessors().getKeyset()) {
+
+        for (SuccessorIdentifier key : node.getSuccessors().getKeyset()) {
+            PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
+            initialPrune(successor);
+        }
+    }
+
+    private void finalPrune(PlasticNode node) {
+        node.setIsArtificial(false);
+        if (node.isLeaf()) {
+            return;
+        }
+
+        Set<SuccessorIdentifier> keys = new HashSet<>(node.getSuccessors().getKeyset());
+        boolean allSuccessorsArePure = true;
+        for (SuccessorIdentifier key : keys) {
+            PlasticNode thisNode = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
+            if (thisNode.isDummy()) {
+                node.getSuccessors().removeSuccessor(key);
+            }
+            if (thisNode.isArtificial()) {
+                node.getSuccessors().removeSuccessor(key);
+            }
+            if (!thisNode.isPure())
+                allSuccessorsArePure = false;
+        }
+
+        if (node.isLeaf() || node.depth >= node.maxDepth) {
+            node.observedClassDistribution = collectStatsFromSuccessors(node);
+            node.killSubtree();
+            node.resetSplitAttribute();
+            return;
+        }
+
+        if ((allSuccessorsArePure && node.getMajorityVotesOfLeaves().size() <= 1)) {
+            node.observedClassDistribution = collectStatsFromSuccessors(node);
+            node.killSubtree();
+            node.resetSplitAttribute();
+            return;
+        }
+
+        for (SuccessorIdentifier key : node.getSuccessors().getKeyset()) {
             PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
             finalPrune(successor);
         }
     }
 
-    private DoubleVector collectStats(CustomEFDTNode node) {
+    private DoubleVector collectStatsFromSuccessors(CustomEFDTNode node) {
         if (node.isLeaf()) {
             return node.observedClassDistribution;
         }
         else {
             DoubleVector stats = new DoubleVector();
             for (CustomEFDTNode successor : node.getSuccessors().getAllSuccessors()) {
-                DoubleVector fromSuccessor = collectStats(successor);
+                DoubleVector fromSuccessor = successor.observedClassDistribution; //collectStatsFromSuccessors(successor);
                 stats.addValues(fromSuccessor);
             }
-            node.observedClassDistribution = stats;
             return stats;
         }
     }
@@ -675,5 +826,16 @@ public class Restructurer {
             return;
         node.setRestructuredFlag();
         node.getSuccessors().getAllSuccessors().forEach(s -> setRestructuredFlagInSubtree((PlasticNode) s));
+    }
+
+    private boolean makeSamePrediction(Collection<CustomEFDTNode> nodes) {
+        HashSet<Double> predictions = new HashSet<>();
+        for (CustomEFDTNode node: nodes) {
+            if (node.observedClassDistribution.numValues() == 0)
+                continue;
+            double amax = node.argmax(node.observedClassDistribution.getArrayRef());
+            predictions.add(amax);
+        }
+        return predictions.size() <= 1;
     }
 }
