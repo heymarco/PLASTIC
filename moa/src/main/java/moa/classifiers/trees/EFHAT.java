@@ -11,31 +11,39 @@ import moa.classifiers.MultiClassClassifier;
 import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserver;
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
+import moa.classifiers.trees.plastic_util.CustomADWINChangeDetector;
 import moa.classifiers.trees.plastic_util.CustomEFDTNode;
-import moa.classifiers.trees.plastic_util.CustomHTNode;
+import moa.classifiers.trees.plastic_util.EFHATNode;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class CustomHT extends AbstractClassifier implements MultiClassClassifier {
+public class EFHAT extends AbstractClassifier implements MultiClassClassifier {
 
     private static final long serialVersionUID = 3L;
 
     @Override
     public String getPurposeString() {
-        return "Lightweight Implementation of HT";
+        return "Lightweight Implementation of EFDT";
     }
 
 
-    CustomEFDTNode root;
+    EFHATNode root;
     int seenItems = 0;
 
     public IntOption gracePeriodOption = new IntOption(
             "gracePeriod",
             'g',
             "The number of instances a leaf should observe between split attempts.",
+            200, 0, Integer.MAX_VALUE);
+
+    public IntOption reEvalPeriodOption = new IntOption(
+            "reevaluationPeriod",
+            'R',
+            "The number of instances an internal node should observe between re-evaluation attempts.",
             200, 0, Integer.MAX_VALUE);
 
     public ClassOption nominalEstimatorOption = new ClassOption("nominalEstimator",
@@ -84,15 +92,15 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
     public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
             "Disable pre-pruning.");
 
-
-    private CustomHTNode createRoot() {
-        return new CustomHTNode(
+    private EFHATNode createRoot() {
+        return new EFHATNode(
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
                 adaptiveConfidenceOption.getValue(),
                 useAdaptiveConfidenceOption.isSet(),
                 leafpredictionOption.getChosenLabel(),
+                reEvalPeriodOption.getValue(),
                 0,
                 maxDepthOption.getValue(),
                 tieThresholdOption.getValue(),
@@ -101,9 +109,12 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
                 new ArrayList<>(),
-                -1
+                -1,
+                new CustomADWINChangeDetector()
         );
     }
+
+
 
     @Override
     public Capabilities getCapabilities() {

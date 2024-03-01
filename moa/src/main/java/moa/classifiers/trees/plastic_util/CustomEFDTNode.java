@@ -49,7 +49,6 @@ public class CustomEFDTNode {
     protected int splitAttributeIndex;
     protected final boolean noPrePrune;
     protected int blockedAttributeIndex;
-    private int deltaCount = 0;
 
     public CustomEFDTNode(SplitCriterion splitCriterion,
                           int gracePeriod,
@@ -166,9 +165,7 @@ public class CustomEFDTNode {
     Double currentConfidence() {
         if (!useAdaptiveConfidence)
             return confidence;
-        double d =  adaptiveConfidence * Math.exp(-numSplitAttempts);
-        deltaCount ++;
-        return d;
+        return  adaptiveConfidence * Math.exp(-numSplitAttempts);
     }
 
     public AttributeSplitSuggestion[] getBestSplitSuggestions(SplitCriterion criterion) {
@@ -221,14 +218,14 @@ public class CustomEFDTNode {
         return getClassVotes();
     }
 
-    private CustomEFDTNode getSuccessor(Instance instance) {
+    CustomEFDTNode getSuccessor(Instance instance) {
         if (isLeaf())
             return null;
         Double attVal = instance.value(splitAttribute);
         return successors.getSuccessorNode(attVal);
     }
 
-    private void attemptInitialSplit(Instance instance) {
+    protected void attemptInitialSplit(Instance instance) {
         if (depth >= maxDepth) {
             return;
         }
@@ -239,7 +236,6 @@ public class CustomEFDTNode {
 
         AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
         Arrays.sort(bestSuggestions);
-        updateInfogainSum(bestSuggestions);
         AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
         xBest = replaceBestSuggestionIfAttributeIsBlocked(xBest, bestSuggestions, blockedAttributeIndex);
 
@@ -252,7 +248,8 @@ public class CustomEFDTNode {
             resetSplitAttribute();
             return;
         }
-        Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
+        int instanceIndex = modelAttIndexToInstanceAttIndex(xBest.splitTest.getAttsTestDependsOn()[0], instance);
+        Attribute newSplitAttribute = instance.attribute(instanceIndex);
         makeSplit(newSplitAttribute, xBest);
         classDistributionAtTimeOfCreation = new DoubleVector(observedClassDistribution.getArrayCopy());
     }
@@ -399,15 +396,15 @@ public class CustomEFDTNode {
         successors = null;
     }
 
-    private double[] getClassVotes() {
+    double[] getClassVotes() {
         return observedClassDistribution.getArrayCopy();
     }
 
-    private void updateStatistics(Instance instance) {
+    protected void updateStatistics(Instance instance) {
         observedClassDistribution.addToValue((int) instance.classValue(), instance.weight());
     }
 
-    private void propagateToSuccessors(Instance instance, int totalNumInstances) {
+    protected void propagateToSuccessors(Instance instance, int totalNumInstances) {
         Double attValue = instance.value(splitAttribute);
         CustomEFDTNode successor = successors.getSuccessorNode(attValue);
         if (successor == null)
@@ -451,7 +448,7 @@ public class CustomEFDTNode {
         );
     }
 
-    private void updateObservers(Instance instance) {
+    protected void updateObservers(Instance instance) {
         for (int i = 0; i < instance.numAttributes() - 1; i++) { //update likelihood
             int instAttIndex = modelAttIndexToInstanceAttIndex(i, instance);
             AttributeClassObserver obs = this.attributeObservers.get(i);

@@ -6,7 +6,7 @@ import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserve
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.core.DoubleVector;
 
-import java.util.List;
+import java.util.*;
 
 public class CustomHTNode extends CustomEFDTNode {
 
@@ -31,36 +31,6 @@ public class CustomHTNode extends CustomEFDTNode {
 
     }
 
-//    private void attemptInitialSplit(Instance instance) {
-//        if (depth >= maxDepth) {
-//            return;
-//        }
-//        if (isPure())
-//            return;
-//
-//        numSplitAttempts++;
-//
-//        AttributeSplitSuggestion[] bestSuggestions = getBestSplitSuggestions(splitCriterion);
-//        Arrays.sort(bestSuggestions);
-////        updateInfogainSum(bestSuggestions);
-//        AttributeSplitSuggestion xBest = bestSuggestions[bestSuggestions.length - 1];
-//        xBest = replaceBestSuggestionIfAttributeIsBlocked(xBest, bestSuggestions, blockedAttributeIndex);
-//
-//        if (!shouldSplitLeaf(bestSuggestions, currentConfidence(), observedClassDistribution))
-//            return;
-//        if (xBest.splitTest == null) {
-//            // preprune - null wins
-//            System.out.println("preprune - null wins");
-//            killSubtree();
-//            resetSplitAttribute();
-//            return;
-//        }
-//        Attribute newSplitAttribute = instance.attribute(xBest.splitTest.getAttsTestDependsOn()[0]);
-//        setSplitAttribute(xBest, newSplitAttribute);
-//        initializeSuccessors(xBest, splitAttribute);
-//        classDistributionAtTimeOfCreation = new DoubleVector(observedClassDistribution.getArrayCopy());
-//    }
-
     @Override
     protected void reevaluateSplit(Instance instance) {}
 
@@ -70,7 +40,7 @@ public class CustomHTNode extends CustomEFDTNode {
                 splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence,
                 leafPrediction, depth, maxDepth,
                 tau, binaryOnly, noPrePrune, nominalObserverBlueprint,
-                classDistribution, usedNominalAttributes, -1  // we don't block attributes in EFDT
+                classDistribution, new LinkedList<>(), -1  // we don't block attributes in HT
         );
     }
 
@@ -79,7 +49,7 @@ public class CustomHTNode extends CustomEFDTNode {
                                     double confidence,
                                     DoubleVector observedClassDistribution
     ) {
-        boolean shouldSplit = false;
+        boolean shouldSplit;
         if (suggestions.length < 2) {
             shouldSplit = suggestions.length > 0;
         } else {

@@ -7,19 +7,15 @@ import java.util.*;
 
 public class MappedTree implements Iterator<PlasticBranch> {
 
-    private PlasticNode root;
     private LinkedList<PlasticBranch> branchQueue;
-    private LinkedList<PlasticBranch> finishedBranches = new LinkedList<>();
+    private final LinkedList<PlasticBranch> finishedBranches = new LinkedList<>();
 
-    private Attribute splitAttribute;
-    private int splitAttributeIndex;
-    private Double splitValue;
-    private int maxBranchLength;
-    private boolean hasNext = true;
-    private PlasticBranch nextElement;
+    private final Attribute splitAttribute;
+    private final int splitAttributeIndex;
+    private final Double splitValue;
+    private final int maxBranchLength;
 
     public MappedTree(PlasticNode root, Attribute splitAttribute, int splitAttributeIndex, Double splitValue, int maxBranchLength) {
-        this.root = root;
         branchQueue = disconnectRoot(root);
 
         this.splitAttribute = splitAttribute;
@@ -41,34 +37,19 @@ public class MappedTree implements Iterator<PlasticBranch> {
         }
         else {
             while (finishedBranches.size() == 0) {
-                branchQueue = mapBranches(branchQueue, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
+                mapBranches(branchQueue, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
             }
             return finishedBranches.removeFirst();
         }
     }
 
-    private LinkedList<PlasticBranch> mapBranches(
+    private void mapBranches(
             LinkedList<PlasticBranch> branches,
             Attribute swapAttribute,
             int swapAttributeIndex,
             Double splitValue,
             int maxBranchLength
     ) {
-//        boolean allFinished = true;
-//        for (PlasticBranch branch: branches) {
-//            allFinished &= getEndConditionForBranch(branch, swapAttribute, swapAttributeIndex, splitValue, maxBranchLength);
-//        }
-//        if (allFinished) {
-//            LinkedList finalBranches = new LinkedList();
-//            for (PlasticBranch b: branches) {
-//                expandBranch(b, splitAttribute, splitAttributeIndex, splitValue);
-//
-//            }
-//            branches.forEach(b -> modifyBranch(b, splitAttribute));
-//            finishedBranches.addAll(branches);
-//            return new LinkedList<>();
-//        }
-
         int numBranches = branches.size();
         for (int i = 0; i < numBranches; i++) {
             PlasticBranch branch = branches.removeFirst();
@@ -78,7 +59,8 @@ public class MappedTree implements Iterator<PlasticBranch> {
                 List<PlasticBranch> decoupledBranches = decoupleLastNode(branch);
                 decoupledBranches.forEach(b -> modifyBranch(b, swapAttribute));
                 finishedBranches.addAll(decoupledBranches);
-                return branches;
+                branchQueue = branches;
+                return;
             }
             PlasticTreeElement lastElement = branch.getLast();
             PlasticBranch branchExtensions = disconnectSuccessors(lastElement, swapAttribute);
@@ -88,7 +70,7 @@ public class MappedTree implements Iterator<PlasticBranch> {
                 branches.add(extendedBranch);
             }
         }
-        return branches;
+        branchQueue = branches;
     }
 
     private boolean getEndConditionForBranch(PlasticBranch branch, Attribute swapAttribute, int swapAttributeIndex, Double splitValue, int maxBranchLength) {
@@ -229,10 +211,7 @@ public class MappedTree implements Iterator<PlasticBranch> {
         }
 
         if (!isBinary && shouldBeBinary) { // Option 4: The split attributes match and the current split is multiway while the old one was binary. In this case, we do something similar to the numeric splits
-            //TODO: we might be able to just keep everything if we have a binary nominal split
-            SuccessorIdentifier defaultKey = new SuccessorIdentifier(false, splitValue, -1.0, false);
             Successors lastNodeSuccessors = new Successors(lastNode.getSuccessors(), true);
-            PlasticNode oldDefaultSuccessor = (PlasticNode) lastNodeSuccessors.getSuccessorNode(defaultKey);
 
             Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
             int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
@@ -255,9 +234,17 @@ public class MappedTree implements Iterator<PlasticBranch> {
             SuccessorIdentifier keyToPreviousSuccessor = new SuccessorIdentifier(false, splitValue, splitValue, false);
             PlasticNode previousSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(keyToPreviousSuccessor);
 
-            lastNode.successors = new Successors(shouldBeBinary, false, splitValue);
             lastNode.splitAttribute = swapAttribute;
             lastNode.splitAttributeIndex = swapAttributeIndex;
+
+            lastNode.successors = null;
+            lastNode.forceSplit(
+                    swapAttribute,
+                    swapAttributeIndex,
+                    splitValue,
+                    shouldBeBinary
+            );
+            lastNode.successors.removeSuccessor(keyToPreviousSuccessor);
             lastNode.successors.addSuccessor(previousSuccessor, keyToPreviousSuccessor);
             return;
         }
