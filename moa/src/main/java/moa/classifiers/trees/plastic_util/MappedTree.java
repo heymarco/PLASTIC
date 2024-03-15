@@ -79,16 +79,16 @@ public class MappedTree implements Iterator<PlasticBranch> {
         boolean isLeaf = lastNodeOfBranch.isLeaf();
         if (isSwapAttribute || isLeaf)
             return true;
-        boolean swapAttributeInChildren = false;
-        for (CustomEFDTNode successor: lastNodeOfBranch.getSuccessors().getAllSuccessors()) {
-            Set<Attribute> splitAttributesOfChildren = ((PlasticNode) successor).getChildrenSplitAttributes();
-            if (splitAttributesOfChildren.contains(swapAttribute)) {
-                swapAttributeInChildren = true;
-                break;
-            }
-        }
-        if (!swapAttributeInChildren)
-            return false;
+//        boolean swapAttributeInChildren = false;
+//        for (CustomEFDTNode successor: lastNodeOfBranch.getSuccessors().getAllSuccessors()) {
+//            Set<Attribute> splitAttributesOfChildren = ((PlasticNode) successor).getChildrenSplitAttributes();
+//            if (splitAttributesOfChildren.contains(swapAttribute)) {
+//                swapAttributeInChildren = true;
+//                break;
+//            }
+//        }
+//        if (swapAttributeInChildren)
+//            return false;
         return branch.getBranchRef().size() >= maxBranchLength;
     }
 
@@ -190,9 +190,9 @@ public class MappedTree implements Iterator<PlasticBranch> {
             if (splitValue.equals(lastNode.successors.getReferenceValue()))
                 // do nothing
                 return;
-            //TODO: we might be able to just keep everything if we have a binary nominal split
             Successors lastNodeSuccessors = new Successors(lastNode.getSuccessors(), true);
 
+            // Corresponds to transformation 3 in the paper
             Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
             int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
             InstanceConditionalTest splitTest = lastNode.getSplitTest();
@@ -211,8 +211,8 @@ public class MappedTree implements Iterator<PlasticBranch> {
         }
 
         if (!isBinary && shouldBeBinary) { // Option 4: The split attributes match and the current split is multiway while the old one was binary. In this case, we do something similar to the numeric splits
+            // Corresponds to transformation 2 in the paper
             Successors lastNodeSuccessors = new Successors(lastNode.getSuccessors(), true);
-
             Attribute lastNodeSplitAttribute = lastNode.getSplitAttribute();
             int lastNodeSplitAttributeIndex = lastNode.getSplitAttributeIndex();
             InstanceConditionalTest splitTest = lastNode.getSplitTest();
@@ -224,6 +224,17 @@ public class MappedTree implements Iterator<PlasticBranch> {
                     shouldBeBinary
             );
             PlasticNode defaultSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(SuccessorIdentifier.DEFAULT_NOMINAL_VALUE);
+//            if (lastNodeSuccessors.contains(splitValue)) {
+//                SuccessorIdentifier foundKey = null;
+//                for (SuccessorIdentifier k: lastNodeSuccessors.getKeyset()) {
+//                    if (k.getSelectorValue() == splitValue) {
+//                        foundKey = k;
+//                        break;
+//                    }
+//                }
+//                if (foundKey != null)
+//                    lastNodeSuccessors.removeSuccessor(foundKey);
+//            }
             defaultSuccessor.transferSplit(
                     lastNodeSuccessors, lastNodeSplitAttribute, lastNodeSplitAttributeIndex, splitTest
             );
@@ -231,11 +242,9 @@ public class MappedTree implements Iterator<PlasticBranch> {
         }
 
         if (isBinary && !shouldBeBinary) { // Option 5: The split is binary but should be multiway. In this case, we force the split and then use the old subtree of the left branch of the old subtree.
+            // Corresponds to transformation 1 in the paper
             SuccessorIdentifier keyToPreviousSuccessor = new SuccessorIdentifier(false, splitValue, splitValue, false);
             PlasticNode previousSuccessor = (PlasticNode) lastNode.getSuccessors().getSuccessorNode(keyToPreviousSuccessor);
-
-            lastNode.splitAttribute = swapAttribute;
-            lastNode.splitAttributeIndex = swapAttributeIndex;
 
             lastNode.successors = null;
             lastNode.forceSplit(
@@ -260,7 +269,6 @@ public class MappedTree implements Iterator<PlasticBranch> {
                                                 Double splitValue) {
         assert splitValue != null;
         PlasticNode lastNode = branch.getLast().getNode();
-        SuccessorIdentifier lastSuccessorId = branch.getLast().getKey();
         boolean forceSplit = lastNode.isLeaf() || lastNode.splitAttribute != swapAttribute;
 
         if (forceSplit) {
@@ -319,7 +327,7 @@ public class MappedTree implements Iterator<PlasticBranch> {
         if (node.isLeaf())
             return;
 
-        if (node.splitAttributeIndex != splitAttributeIndex) {
+        if (node.getSplitAttributeIndex() != splitAttributeIndex) {
             for (CustomEFDTNode successor: node.getSuccessors().getAllSuccessors()) {
                 removeUnreachableSubtree((PlasticNode) successor, splitAttributeIndex, threshold, isLower);
             }

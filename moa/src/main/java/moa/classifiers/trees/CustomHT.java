@@ -13,13 +13,14 @@ import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserve
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.classifiers.trees.plastic_util.CustomEFDTNode;
 import moa.classifiers.trees.plastic_util.CustomHTNode;
+import moa.classifiers.trees.plastic_util.MeasuresNumberOfLeaves;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
 
 import java.util.ArrayList;
 
-public class CustomHT extends AbstractClassifier implements MultiClassClassifier {
+public class CustomHT extends AbstractClassifier implements MultiClassClassifier, MeasuresNumberOfLeaves {
 
     private static final long serialVersionUID = 3L;
 
@@ -147,5 +148,10 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
     @Override
     public boolean isRandomizable() {
         return false;
+    }
+
+    @Override
+    public int getLeafNumber() {
+        return root.getLeafNumber();
     }
 }

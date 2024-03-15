@@ -18,7 +18,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
 
-public class CustomEFDTNode {
+public class CustomEFDTNode implements PerformsTreeRevision, MeasuresNumberOfLeaves {
     protected final int gracePeriod;
     protected final SplitCriterion splitCriterion;
     protected final Double confidence;
@@ -46,9 +46,9 @@ public class CustomEFDTNode {
     protected int nodeTime = 0;
     protected Successors successors;
     protected Attribute splitAttribute;
-    protected int splitAttributeIndex;
     protected final boolean noPrePrune;
     protected int blockedAttributeIndex;
+    protected boolean performedTreeRevision = false;
 
     public CustomEFDTNode(SplitCriterion splitCriterion,
                           int gracePeriod,
@@ -123,7 +123,9 @@ public class CustomEFDTNode {
     }
 
     public Integer getSplitAttributeIndex() {
-        return splitAttributeIndex;
+        if (splitTest == null)
+            return -1;
+        return splitTest.getAttsTestDependsOn()[0];
     }
 
     public InstanceConditionalTest getSplitTest() {
@@ -301,6 +303,7 @@ public class CustomEFDTNode {
                         }
                     }
                 }
+                performedTreeRevision = true;
                 if (!doResplit) {
                     NumericAttributeBinaryTest test = (NumericAttributeBinaryTest) bestSuggestion.splitTest;
                     successors.adjustThreshold(test.getSplitValue());
@@ -382,13 +385,11 @@ public class CustomEFDTNode {
     protected void setSplitAttribute(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
         int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
         this.splitAttribute = splitAttribute;
-        splitAttributeIndex = newSplitAttributeIndex;
         setSplitTest(xBest.splitTest);
     }
 
     protected void resetSplitAttribute() {
         splitAttribute = null;
-        splitAttributeIndex = -1;
         splitTest = null;
     }
 
@@ -538,7 +539,7 @@ public class CustomEFDTNode {
                 for (AttributeSplitSuggestion s: suggestions) {
                     if (s.splitTest == null)
                         continue;
-                    if (s.splitTest.getAttsTestDependsOn()[0] == splitAttributeIndex) {
+                    if (s.splitTest.getAttsTestDependsOn()[0] == getSplitAttributeIndex()) {
                         merit = s.merit;
                         break;
                     }
@@ -546,16 +547,16 @@ public class CustomEFDTNode {
             }
             else if (splitTest instanceof NominalAttributeBinaryTest) {
                 double currentValue = successors.getReferenceValue();
-                NominalAttributeClassObserver obs = (NominalAttributeClassObserver) attributeObservers.get(splitAttributeIndex);
-                AttributeSplitSuggestion xCurrent = obs.forceSplit(splitCriterion, observedClassDistribution.getArrayCopy(), splitAttributeIndex, true, currentValue);
+                NominalAttributeClassObserver obs = (NominalAttributeClassObserver) attributeObservers.get(getSplitAttributeIndex());
+                AttributeSplitSuggestion xCurrent = obs.forceSplit(splitCriterion, observedClassDistribution.getArrayCopy(), getSplitAttributeIndex(), true, currentValue);
                 merit = xCurrent == null ? 0.0 : xCurrent.merit;
                 if (xCurrent != null)
                     merit = xCurrent.splitTest == null ? 0.0 : xCurrent.merit;
             }
             else if (splitTest instanceof NumericAttributeBinaryTest) {
                 double currentThreshold = successors.getReferenceValue();
-                GaussianNumericAttributeClassObserver obs = (GaussianNumericAttributeClassObserver) attributeObservers.get(splitAttributeIndex);
-                AttributeSplitSuggestion xCurrent = obs.forceSplit(splitCriterion, observedClassDistribution.getArrayCopy(), splitAttributeIndex, currentThreshold);
+                GaussianNumericAttributeClassObserver obs = (GaussianNumericAttributeClassObserver) attributeObservers.get(getSplitAttributeIndex());
+                AttributeSplitSuggestion xCurrent = obs.forceSplit(splitCriterion, observedClassDistribution.getArrayCopy(), getSplitAttributeIndex(), currentThreshold);
                 merit = xCurrent == null ? 0.0 : xCurrent.merit;
                 if (xCurrent != null)
                     merit = xCurrent.splitTest == null ? 0.0 : xCurrent.merit;
@@ -630,5 +631,29 @@ public class CustomEFDTNode {
 
         setSplitAttribute(suggestion, splitAttribute);
         return initializeSuccessors(suggestion, splitAttribute);
+    }
+
+    @Override
+    public boolean didPerformTreeRevision() {
+        boolean didRevise = performedTreeRevision;
+        performedTreeRevision = false;
+        if (isLeaf()) {
+            return didRevise;
+        }
+        for (CustomEFDTNode child: successors.getAllSuccessors()) {
+            didRevise |= child.didPerformTreeRevision();
+        }
+        return didRevise;
+    }
+
+    @Override
+    public int getLeafNumber() {
+        if (isLeaf())
+            return 1;
+        int sum = 0;
+        for (CustomEFDTNode s: successors.getAllSuccessors()) {
+            sum += s.getLeafNumber();
+        }
+        return sum;
     }
 }

@@ -3,14 +3,18 @@ package moa.evaluation;
 import com.yahoo.labs.samoa.instances.Instance;
 import moa.classifiers.SemiSupervisedLearner;
 //import moa.classifiers.semisupervised.ClusterAndLabelClassifier;
+import moa.classifiers.trees.plastic_util.MeasuresNumberOfLeaves;
+import moa.classifiers.trees.plastic_util.PerformsTreeRevision;
 import moa.core.Example;
 import moa.core.Measurement;
 import moa.learners.Learner;
 import moa.streams.ArffFileStream;
 import moa.streams.ExampleStream;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 import moa.classifiers.bayes.NaiveBayes;
@@ -25,12 +29,25 @@ public class EfficientEvaluationLoops {
     public static class PrequentialResult {
         public ArrayList<double[]> windowedResults;
         public double[] cumulativeResults;
+        public LinkedList<Integer> treeRevisionIndices;
+        public LinkedList<Integer> numberOfLeaves;
 
         public HashMap<String, Double> otherMeasurements;
 
-        public PrequentialResult(ArrayList<double[]> windowedResults, double[] cumulativeResults) {
+        public PrequentialResult(ArrayList<double[]> windowedResults,
+                                 double[] cumulativeResults) {
             this.windowedResults = windowedResults;
             this.cumulativeResults = cumulativeResults;
+        }
+
+        public PrequentialResult(ArrayList<double[]> windowedResults,
+                                 double[] cumulativeResults,
+                                 LinkedList<Integer> treeRevisionIndices,
+                                 LinkedList<Integer> numberOfLeaves) {
+            this.windowedResults = windowedResults;
+            this.cumulativeResults = cumulativeResults;
+            this.treeRevisionIndices = treeRevisionIndices;
+            this.numberOfLeaves = numberOfLeaves;
         }
 
         public PrequentialResult(ArrayList<double[]> windowedResults, double[] cumulativeResults,
@@ -57,8 +74,12 @@ public class EfficientEvaluationLoops {
     public static PrequentialResult PrequentialEvaluation(ExampleStream stream, Learner learner,
                                                           LearningPerformanceEvaluator basicEvaluator,
                                                           LearningPerformanceEvaluator windowedEvaluator,
-                                                          long maxInstances, long windowSize) {
+                                                          long maxInstances, long windowSize,
+                                                          boolean recordTreeRevisions, boolean recordNumberOfLeaves) {
         int instancesProcessed = 0;
+
+        LinkedList<Integer> treeRevisionIndices = new LinkedList<>();
+        LinkedList<Integer> numberOfLeaves = new LinkedList<>();
 
         if (!stream.hasMoreInstances())
             stream.restart();
@@ -88,6 +109,16 @@ public class EfficientEvaluationLoops {
                         values[i] = measurements[i].getValue();
                     windowed_results.add(values);
                 }
+
+            if (instancesProcessed % windowSize == 0) {
+                if (recordTreeRevisions && learner instanceof PerformsTreeRevision) {
+                    if (((PerformsTreeRevision) learner).didPerformTreeRevision())
+                        treeRevisionIndices.add(instancesProcessed);
+                }
+                if (recordNumberOfLeaves && learner instanceof MeasuresNumberOfLeaves) {
+                    numberOfLeaves.add(((MeasuresNumberOfLeaves) learner).getLeafNumber());
+                }
+            }
         }
         if (windowedEvaluator != null)
             if (instancesProcessed % windowSize != 0) {
@@ -96,6 +127,14 @@ public class EfficientEvaluationLoops {
                 for (int i = 0; i < values.length; ++i)
                     values[i] = measurements[i].getValue();
                 windowed_results.add(values);
+
+                if (recordTreeRevisions && learner instanceof PerformsTreeRevision) {
+                    if (((PerformsTreeRevision) learner).didPerformTreeRevision())
+                        treeRevisionIndices.add(instancesProcessed);
+                }
+                if (recordNumberOfLeaves && learner instanceof MeasuresNumberOfLeaves) {
+                    numberOfLeaves.add(((MeasuresNumberOfLeaves) learner).getLeafNumber());
+                }
             }
 
         double[] cumulative_results = null;
@@ -107,7 +146,7 @@ public class EfficientEvaluationLoops {
                 cumulative_results[i] = measurements[i].getValue();
         }
 
-        return new PrequentialResult(windowed_results, cumulative_results);
+        return new PrequentialResult(windowed_results, cumulative_results, treeRevisionIndices, numberOfLeaves);
     }
 
     public static PrequentialResult PrequentialSSLEvaluation(ExampleStream stream, Learner learner,

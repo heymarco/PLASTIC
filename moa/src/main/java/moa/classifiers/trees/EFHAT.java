@@ -11,9 +11,7 @@ import moa.classifiers.MultiClassClassifier;
 import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserver;
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.classifiers.trees.plastic_util.CustomADWINChangeDetector;
-import moa.classifiers.trees.plastic_util.CustomEFDTNode;
-import moa.classifiers.trees.plastic_util.EFHATNode;
+import moa.classifiers.trees.plastic_util.*;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
@@ -21,7 +19,7 @@ import moa.options.ClassOption;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EFHAT extends AbstractClassifier implements MultiClassClassifier {
+public class EFHAT extends AbstractClassifier implements MultiClassClassifier, PerformsTreeRevision, MeasuresNumberOfLeaves {
 
     private static final long serialVersionUID = 3L;
 
@@ -158,5 +156,15 @@ public class EFHAT extends AbstractClassifier implements MultiClassClassifier {
     @Override
     public boolean isRandomizable() {
         return false;
+    }
+
+    @Override
+    public boolean didPerformTreeRevision() {
+        return root.didPerformTreeRevision();
+    }
+
+    @Override
+    public int getLeafNumber() {
+        return root.getLeafNumber();
     }
 }

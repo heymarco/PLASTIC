@@ -24,8 +24,10 @@ public class Restructurer {
         int splitAttributeIndex = suggestion.splitTest.getAttsTestDependsOn()[0];
 
         boolean checkSucceeds = checkPreconditions(node, splitAttribute, splitValue, isBinary);
+
         if (!checkSucceeds)
             return null;
+
         if (splitAttribute == node.splitAttribute && isBinary) {
             assert splitValue != null;
             Double currentNominalBinarysplitValue = node.getSuccessors().getReferenceValue();
@@ -43,14 +45,17 @@ public class Restructurer {
             }
         }
 
-        node.collectChildrenSplitAttributes();
+//        node.collectChildrenSplitAttributes();
         MappedTree mappedTree = new MappedTree(node, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
         PlasticNode newRoot = reassembleTree(mappedTree);
 
         newRoot.setSplitAttribute(suggestion, splitAttribute);
         newRoot.updateUsedNominalAttributesInSubtree(splitAttribute, splitAttributeIndex);
+
+        // Reset counters in restructured nodes
         newRoot.getSuccessors().getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
 
+        // Initialize the statistics of the root's direct successors
         List<SuccessorIdentifier> sortedKeys = new LinkedList<>(newRoot.getSuccessors().getKeyset());
         Collections.sort(sortedKeys);
         for (SuccessorIdentifier key: sortedKeys) {
@@ -83,6 +88,7 @@ public class Restructurer {
             }
         }
 
+        // Prune the artificial leaves
         finalPrune(node);
         return newRoot;
     }
@@ -232,9 +238,9 @@ public class Restructurer {
             if (thisNode.isDummy()) {
                 node.getSuccessors().removeSuccessor(key);
             }
-//            if (thisNode.isArtificial()) {
-//                node.getSuccessors().removeSuccessor(key);
-//            }
+            if (thisNode.isArtificial()) {
+                node.getSuccessors().removeSuccessor(key);
+            }
             if (!thisNode.isPure())
                 allSuccessorsArePure = false;
         }
@@ -277,7 +283,7 @@ public class Restructurer {
         if (node.isLeaf())
             return;
 
-        if (node.splitAttributeIndex != splitAttributeIndex) {
+        if (node.getSplitAttributeIndex() != splitAttributeIndex) {
             for (CustomEFDTNode successor: node.getSuccessors().getAllSuccessors()) {
                 removeUnreachableSubtree((PlasticNode) successor, splitAttributeIndex, threshold, isLower);
             }

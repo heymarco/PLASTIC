@@ -1,43 +1,36 @@
 package moa.classifiers.trees.plastic_util;
 
 import com.yahoo.labs.samoa.instances.Instance;
-import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
-import moa.classifiers.core.driftdetection.ADWINChangeDetector;
-import moa.classifiers.core.driftdetection.ChangeDetector;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
+import moa.classifiers.trees.CustomEFDT;
 import moa.core.DoubleVector;
 
 import java.util.LinkedList;
 import java.util.List;
 
-public class EFHATNode extends CustomEFDTNode {
+public class APlasticNode extends PlasticNode{
 
-    private CustomADWINChangeDetector changeDetector;  // we need to access the width of adwin to compute switch significance. This is not possible with the default adwin change detector class.
-    private EFHATNode backgroundLearner;
+    private CustomADWINChangeDetector changeDetector = new CustomADWINChangeDetector();  // we need to access the width of adwin to compute switch significance. This is not possible with the default adwin change detector class.
+    private APlasticNode backgroundLearner;
     private LinkedList<Double> predictions = new LinkedList<>();
 
-    public EFHATNode(SplitCriterion splitCriterion,
-                     int gracePeriod,
-                     Double confidence,
-                     Double adaptiveConfidence,
-                     boolean useAdaptiveConfidence,
-                     String leafPrediction,
-                     Integer minSamplesReevaluate,
-                     Integer depth,
-                     Integer maxDepth,
-                     Double tau,
-                     boolean binaryOnly,
-                     boolean noPrePrune,
-                     NominalAttributeClassObserver nominalObserverBlueprint,
-                     DoubleVector observedClassDistribution,
-                     List<Integer> usedNominalAttributes,
-                     int blockedAttributeIndex,
-                     CustomADWINChangeDetector changeDetector) {
-        super(splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence, leafPrediction,
-                minSamplesReevaluate, depth, maxDepth, tau, 0.0, 0.0, binaryOnly, noPrePrune,
-                nominalObserverBlueprint, observedClassDistribution, usedNominalAttributes, blockedAttributeIndex);
-        this.changeDetector = changeDetector == null ? new CustomADWINChangeDetector() : changeDetector;
+    public APlasticNode(SplitCriterion splitCriterion, int gracePeriod, Double confidence, Double adaptiveConfidence, boolean useAdaptiveConfidence, String leafPrediction, Integer minSamplesReevaluate, Integer depth, Integer maxDepth, Double tau, Double tauReevaluate, Double relMinDeltaG, boolean binaryOnly, boolean noPrePrune, NominalAttributeClassObserver nominalObserverBlueprint, DoubleVector observedClassDistribution, List<Integer> usedNominalAttributes, int maxBranchLength, double acceptedNumericThresholdDeviation, int blockedAttributeIndex) {
+        super(splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence, leafPrediction, minSamplesReevaluate, depth, maxDepth, tau, tauReevaluate, relMinDeltaG, binaryOnly, noPrePrune, nominalObserverBlueprint, observedClassDistribution, usedNominalAttributes, maxBranchLength, acceptedNumericThresholdDeviation, blockedAttributeIndex);
+    }
+
+    public APlasticNode(PlasticNode other) {
+        super(other);
+    }
+
+    @Override
+    protected APlasticNode newNode(int depth, DoubleVector classDistribution, List<Integer> usedNominalAttributes) {
+        return new APlasticNode(
+                splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence,
+                leafPrediction, minSamplesReevaluate, depth, maxDepth,
+                tau, tauReevaluate, relMinDeltaG, binaryOnly, noPrePrune, nominalObserverBlueprint,
+                classDistribution, usedNominalAttributes, maxBranchLength, acceptedNumericThresholdDeviation, getSplitAttributeIndex()
+        );
     }
 
     @Override
@@ -64,19 +57,25 @@ public class EFHATNode extends CustomEFDTNode {
         if (isLeaf() && nodeTime % gracePeriod == 0)
             attemptInitialSplit(instance);
 
-        if (!isLeaf() && nodeTime % minSamplesReevaluate == 0)
-            hatGrow();
+        if (!isLeaf() && nodeTime % minSamplesReevaluate == 0) {
+            if (changeDetector.getChange() || backgroundLearner != null) {
+                hatGrow();
+            }
+            else {
+                reevaluateSplit(instance);
+            }
+        }
 
         if (!isLeaf()) //Do NOT! put this in the upper (!isleaf()) block. This is not the same since we might kill the subtree during reevaluation!
             propagateToSuccessors(instance, totalNumInstances);
     }
 
     private void hatGrow() {
-        if (changeDetector.getChange()) {
-            backgroundLearner = newNode(depth, new DoubleVector(), new LinkedList<>(usedNominalAttributes));
+        if (backgroundLearner == null) {
+            backgroundLearner = (APlasticNode) newNode(depth, new DoubleVector(), new LinkedList<>(usedNominalAttributes));
             return;
         }
-        if (backgroundLearner != null) {
+        else {
             // we are working with error rates here, not with accuracy.
             if (backgroundLearner.changeDetector.getEstimation() > changeDetector.getEstimation())
                 return;
@@ -93,27 +92,6 @@ public class EFHATNode extends CustomEFDTNode {
         }
     }
 
-    @Override
-    protected EFHATNode newNode(int depth, DoubleVector classDistribution, List<Integer> usedNominalAttributes) {
-        return new EFHATNode(
-                splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence,
-                leafPrediction, minSamplesReevaluate, depth, maxDepth,
-                tau, binaryOnly, noPrePrune, nominalObserverBlueprint,
-                classDistribution, new LinkedList<>(),
-                -1,  // we don't block attributes in HT
-                (CustomADWINChangeDetector) changeDetector.copy()
-        );
-    }
-
-    private Double switchSignificance(double e1, double e2, double w1, double w2) {
-        if (w1 == 0 || w2 == 0)
-            return 1.0;
-        double diff = Math.abs(e1 - e2);
-        double m = w1 * w2 / (w1 + w2);
-        double sig = 2 * Math.exp(-2 * m * Math.pow(diff, 2));
-        return sig;
-    }
-
     private void makeBackgroundLearnerMainLearner() {
         splitAttribute = backgroundLearner.splitAttribute;
         successors = backgroundLearner.successors;
@@ -127,6 +105,15 @@ public class EFHATNode extends CustomEFDTNode {
         backgroundLearner = null;
     }
 
+    private Double switchSignificance(double e1, double e2, double w1, double w2) {
+        if (w1 == 0 || w2 == 0)
+            return 1.0;
+        double diff = Math.abs(e1 - e2);
+        double m = w1 * w2 / (w1 + w2);
+        double sig = 2 * Math.exp(-2 * m * Math.pow(diff, 2));
+        return sig;
+    }
+
     private void updateChangeDetector(double label) {
         if (predictions.size() == 0)
             return;
@@ -134,5 +121,16 @@ public class EFHATNode extends CustomEFDTNode {
         if (pred == null)
             return;
         changeDetector.input(pred == label ? 0.0 : 1.0); // monitoring error rate, not accuracy.
+    }
+
+    protected void removeBackgroundLearnersInSubtree() {
+        if (getRestructuredFlag()) {
+            backgroundLearner = null;
+            changeDetector = (CustomADWINChangeDetector) changeDetector.copy();
+            if (!isLeaf()) {
+                for (CustomEFDTNode n: successors.getAllSuccessors())
+                    ((APlasticNode) n).removeBackgroundLearnersInSubtree();
+            }
+        }
     }
 }

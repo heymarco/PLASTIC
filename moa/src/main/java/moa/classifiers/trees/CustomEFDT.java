@@ -12,13 +12,15 @@ import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserv
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.classifiers.trees.plastic_util.CustomEFDTNode;
+import moa.classifiers.trees.plastic_util.MeasuresNumberOfLeaves;
+import moa.classifiers.trees.plastic_util.PerformsTreeRevision;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
 
 import java.util.ArrayList;
 
-public class CustomEFDT extends AbstractClassifier implements MultiClassClassifier {
+public class CustomEFDT extends AbstractClassifier implements MultiClassClassifier, PerformsTreeRevision, MeasuresNumberOfLeaves {
 
     private static final long serialVersionUID = 3L;
 
@@ -163,5 +165,15 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
     @Override
     public boolean isRandomizable() {
         return false;
+    }
+
+    @Override
+    public boolean didPerformTreeRevision() {
+        return root.didPerformTreeRevision();
+    }
+
+    @Override
+    public int getLeafNumber() {
+        return root.getLeafNumber();
     }
 }
