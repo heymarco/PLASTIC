@@ -45,7 +45,7 @@ public class Restructurer extends AbstractMOAObject {
             }
         }
 
-        node.collectChildrenSplitAttributes();
+//        node.collectChildrenSplitAttributes();
         MappedTree mappedTree = new MappedTree(node, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
         PlasticNode newRoot = reassembleTree(mappedTree);
 
@@ -88,8 +88,7 @@ public class Restructurer extends AbstractMOAObject {
             }
         }
 
-        // Prune the artificial leaves
-        finalPrune(node);
+        finalProcessing(node);
         return newRoot;
     }
 
@@ -225,7 +224,7 @@ public class Restructurer extends AbstractMOAObject {
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
     }
 
-    private void finalPrune(PlasticNode node) {
+    private void finalProcessing(PlasticNode node) {
         node.setIsArtificial(false);
         if (node.isLeaf()) {
             return;
@@ -238,9 +237,6 @@ public class Restructurer extends AbstractMOAObject {
             if (thisNode.isDummy()) {
                 node.getSuccessors().removeSuccessor(key);
             }
-//            if (thisNode.isArtificial()) {
-//                node.getSuccessors().removeSuccessor(key);
-//            }
             if (!thisNode.isPure())
                 allSuccessorsArePure = false;
         }
@@ -261,7 +257,7 @@ public class Restructurer extends AbstractMOAObject {
 
         for (SuccessorIdentifier key : node.getSuccessors().getKeyset()) {
             PlasticNode successor = (PlasticNode) node.getSuccessors().getSuccessorNode(key);
-            finalPrune(successor);
+            finalProcessing(successor);
         }
     }
 
