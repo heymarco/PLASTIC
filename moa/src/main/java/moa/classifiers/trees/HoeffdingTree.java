@@ -422,6 +422,8 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         
         protected boolean isInitialized;
 
+        protected int samplesSeen = 0;
+
         public ActiveLearningNode(double[] initialClassObservations) {
             super(initialClassObservations);
             this.weightSeenAtLastSplitEvaluation = getWeightSeen();
@@ -440,6 +442,9 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
                 this.attributeObservers = new AutoExpandVector<AttributeClassObserver>(inst.numAttributes());
                 this.isInitialized = true;
             }
+
+            samplesSeen++;
+
             this.observedClassDistribution.addToValue((int) inst.classValue(),
                     inst.weight());
             for (int i = 0; i < inst.numAttributes() - 1; i++) {
@@ -567,8 +572,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
                     && (learningNode instanceof ActiveLearningNode)) {
                 ActiveLearningNode activeLearningNode = (ActiveLearningNode) learningNode;
                 double weightSeen = activeLearningNode.getWeightSeen();
-                if (weightSeen
-                        - activeLearningNode.getWeightSeenAtLastSplitEvaluation() >= this.gracePeriodOption.getValue()) {
+                if (weightSeen - activeLearningNode.getWeightSeenAtLastSplitEvaluation() >= this.gracePeriodOption.getValue()) {
                     attemptToSplit(activeLearningNode, foundNode.parent,
                             foundNode.parentBranch);
                     activeLearningNode.setWeightSeenAtLastSplitEvaluation(weightSeen);
@@ -671,7 +675,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
                 shouldSplit = bestSplitSuggestions.length > 0;
             } else {
                 double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
-                        this.splitConfidenceOption.getValue(), node.getWeightSeen());
+                        this.splitConfidenceOption.getValue(), node.samplesSeen);
                 AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
                 AttributeSplitSuggestion secondBestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 2];
                 if ((bestSuggestion.merit - secondBestSuggestion.merit > hoeffdingBound)

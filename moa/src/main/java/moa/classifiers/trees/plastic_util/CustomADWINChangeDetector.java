@@ -20,6 +20,8 @@ public class CustomADWINChangeDetector extends ADWINChangeDetector {
     }
 
     public int getWidth() {
+        if (adwin == null)
+            return 0;
         return adwin.getWidth();
     }
 }

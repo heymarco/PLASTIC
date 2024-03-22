@@ -1,8 +1,10 @@
 package moa.classifiers.trees.plastic_util;
 
+import moa.AbstractMOAObject;
+
 import java.util.*;
 
-public class Successors {
+public class Successors extends AbstractMOAObject {
     private Double referenceValue;
     private HashMap<SuccessorIdentifier, CustomEFDTNode> successors = new HashMap<>();
 
@@ -208,5 +210,10 @@ public class Successors {
 
     protected CustomEFDTNode removeSuccessor(SuccessorIdentifier key) {
         return successors.remove(key);
+    }
+
+    @Override
+    public void getDescription(StringBuilder sb, int indent) {
+
     }
 }

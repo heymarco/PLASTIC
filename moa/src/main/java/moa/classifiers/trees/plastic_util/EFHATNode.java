@@ -6,6 +6,9 @@ import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserve
 import moa.classifiers.core.driftdetection.ADWINChangeDetector;
 import moa.classifiers.core.driftdetection.ChangeDetector;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
+import moa.classifiers.trees.EFHAT;
+import moa.classifiers.trees.HoeffdingAdaptiveTree;
+import moa.classifiers.trees.HoeffdingTree;
 import moa.core.DoubleVector;
 
 import java.util.LinkedList;
@@ -16,6 +19,7 @@ public class EFHATNode extends CustomEFDTNode {
     private CustomADWINChangeDetector changeDetector;  // we need to access the width of adwin to compute switch significance. This is not possible with the default adwin change detector class.
     private EFHATNode backgroundLearner;
     private LinkedList<Double> predictions = new LinkedList<>();
+    private boolean isBackgroundLearner = false;
 
     public EFHATNode(SplitCriterion splitCriterion,
                      int gracePeriod,
@@ -38,6 +42,31 @@ public class EFHATNode extends CustomEFDTNode {
                 minSamplesReevaluate, depth, maxDepth, tau, 0.0, 0.0, binaryOnly, noPrePrune,
                 nominalObserverBlueprint, observedClassDistribution, usedNominalAttributes, blockedAttributeIndex);
         this.changeDetector = changeDetector == null ? new CustomADWINChangeDetector() : changeDetector;
+    }
+
+    public EFHATNode(SplitCriterion splitCriterion,
+                     int gracePeriod,
+                     Double confidence,
+                     Double adaptiveConfidence,
+                     boolean useAdaptiveConfidence,
+                     String leafPrediction,
+                     Integer minSamplesReevaluate,
+                     Integer depth,
+                     Integer maxDepth,
+                     Double tau,
+                     boolean binaryOnly,
+                     boolean noPrePrune,
+                     NominalAttributeClassObserver nominalObserverBlueprint,
+                     DoubleVector observedClassDistribution,
+                     List<Integer> usedNominalAttributes,
+                     int blockedAttributeIndex,
+                     CustomADWINChangeDetector changeDetector,
+                     boolean isBackgroundLearner) {
+        super(splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence, leafPrediction,
+                minSamplesReevaluate, depth, maxDepth, tau, 0.0, 0.0, binaryOnly, noPrePrune,
+                nominalObserverBlueprint, observedClassDistribution, usedNominalAttributes, blockedAttributeIndex);
+        this.changeDetector = changeDetector == null ? new CustomADWINChangeDetector() : changeDetector;
+        this.isBackgroundLearner = isBackgroundLearner;
     }
 
     @Override
@@ -64,7 +93,9 @@ public class EFHATNode extends CustomEFDTNode {
         if (isLeaf() && nodeTime % gracePeriod == 0)
             attemptInitialSplit(instance);
 
-        if (!isLeaf() && nodeTime % minSamplesReevaluate == 0)
+        if (!isLeaf()
+//                && nodeTime % minSamplesReevaluate == 0
+        )
             hatGrow();
 
         if (!isLeaf()) //Do NOT! put this in the upper (!isleaf()) block. This is not the same since we might kill the subtree during reevaluation!
@@ -74,21 +105,31 @@ public class EFHATNode extends CustomEFDTNode {
     private void hatGrow() {
         if (changeDetector.getChange()) {
             backgroundLearner = newNode(depth, new DoubleVector(), new LinkedList<>(usedNominalAttributes));
-            return;
+            backgroundLearner.isBackgroundLearner = true;
         }
-        if (backgroundLearner != null) {
-            // we are working with error rates here, not with accuracy.
-            if (backgroundLearner.changeDetector.getEstimation() > changeDetector.getEstimation())
-                return;
+        else if (backgroundLearner != null) {
+            // adopted from HAT implementation
+            if (changeDetector.getWidth() > minSamplesReevaluate && backgroundLearner.changeDetector.getWidth() > minSamplesReevaluate) {
+                double oldErrorRate = changeDetector.getEstimation();
+                double oldWS = changeDetector.getWidth();
+                double altErrorRate = backgroundLearner.changeDetector.getEstimation();
+                double altWS = backgroundLearner.changeDetector.getWidth();
 
-            double e1 = changeDetector.getEstimation();
-            double w1 = changeDetector.getWidth();
-            double e2 = backgroundLearner.changeDetector.getEstimation();
-            double w2 = backgroundLearner.changeDetector.getWidth();
-            double significance = switchSignificance(e1, e2, w1, w2);
-            if (significance < confidence) {
-                performedTreeRevision = true;
-                makeBackgroundLearnerMainLearner();
+                double fDelta = .05;
+                //if (gNumAlts>0) fDelta=fDelta/gNumAlts;
+//                double fN = 1.0 / w2 + 1.0 / w1;
+                double fN = 1.0 / altWS + 1.0 / oldWS;
+                double Bound = (double) Math.sqrt((double) 2.0 * oldErrorRate * (1.0 - oldErrorRate) * Math.log(2.0 / fDelta) * fN);
+
+//                double significance = switchSignificance(e1, e2, w1, w2);
+                if (Bound < oldErrorRate - altErrorRate) {
+                    performedTreeRevision = true;
+                    makeBackgroundLearnerMainLearner();
+                }
+                else if (Bound < altErrorRate - oldErrorRate) {
+                    // Erase alternate tree
+                    backgroundLearner = null;
+                }
             }
         }
     }
@@ -101,17 +142,9 @@ public class EFHATNode extends CustomEFDTNode {
                 tau, binaryOnly, noPrePrune, nominalObserverBlueprint,
                 classDistribution, new LinkedList<>(),
                 -1,  // we don't block attributes in HT
-                (CustomADWINChangeDetector) changeDetector.copy()
+                (CustomADWINChangeDetector) changeDetector.copy(),
+                isBackgroundLearner
         );
-    }
-
-    private Double switchSignificance(double e1, double e2, double w1, double w2) {
-        if (w1 == 0 || w2 == 0)
-            return 1.0;
-        double diff = Math.abs(e1 - e2);
-        double m = w1 * w2 / (w1 + w2);
-        double sig = 2 * Math.exp(-2 * m * Math.pow(diff, 2));
-        return sig;
     }
 
     private void makeBackgroundLearnerMainLearner() {
@@ -134,5 +167,14 @@ public class EFHATNode extends CustomEFDTNode {
         if (pred == null)
             return;
         changeDetector.input(pred == label ? 0.0 : 1.0); // monitoring error rate, not accuracy.
+    }
+
+    private void resetIsBackgroundLearnerInSubtree() {
+        isBackgroundLearner = false;
+        if (isLeaf())
+            return;
+        for (CustomEFDTNode n: successors.getAllSuccessors()) {
+            ((EFHATNode) n).resetIsBackgroundLearnerInSubtree();
+        }
     }
 }

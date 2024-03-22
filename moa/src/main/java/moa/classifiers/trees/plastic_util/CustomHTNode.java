@@ -32,7 +32,8 @@ public class CustomHTNode extends CustomEFDTNode {
     }
 
     @Override
-    protected void reevaluateSplit(Instance instance) {}
+    protected void reevaluateSplit(Instance instance) {
+    }
 
     @Override
     protected CustomHTNode newNode(int depth, DoubleVector classDistribution, List<Integer> usedNominalAttributes) {

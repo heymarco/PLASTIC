@@ -2,6 +2,7 @@ package moa.classifiers.trees.plastic_util;
 
 import com.yahoo.labs.samoa.instances.Attribute;
 import com.yahoo.labs.samoa.instances.Instance;
+import moa.AbstractMOAObject;
 import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.attributeclassobservers.AttributeClassObserver;
 import moa.classifiers.core.attributeclassobservers.GaussianNumericAttributeClassObserver;
@@ -18,7 +19,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
 
-public class CustomEFDTNode implements PerformsTreeRevision, MeasuresNumberOfLeaves {
+public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRevision, MeasuresNumberOfLeaves {
     protected final int gracePeriod;
     protected final SplitCriterion splitCriterion;
     protected final Double confidence;
@@ -520,7 +521,7 @@ public class CustomEFDTNode implements PerformsTreeRevision, MeasuresNumberOfLea
             if (bestSuggestion.merit < 1e-10)
                 shouldSplit = false; // we don't use average here
 
-            if (shouldSplit) {  //TODO: Check why our approach degrades when we have this turned on.
+            if (shouldSplit) {
                 for (Integer i : usedNominalAttributes) {
                     if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
                         shouldSplit = false;
@@ -655,5 +656,10 @@ public class CustomEFDTNode implements PerformsTreeRevision, MeasuresNumberOfLea
             sum += s.getLeafNumber();
         }
         return sum;
+    }
+
+    @Override
+    public void getDescription(StringBuilder sb, int indent) {
+
     }
 }

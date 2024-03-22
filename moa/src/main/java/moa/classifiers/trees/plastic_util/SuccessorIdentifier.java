@@ -1,10 +1,11 @@
 package moa.classifiers.trees.plastic_util;
 
+import moa.AbstractMOAObject;
 import scala.util.Success;
 
 import java.util.Objects;
 
-public class SuccessorIdentifier implements Comparable<SuccessorIdentifier> {
+public class SuccessorIdentifier extends AbstractMOAObject implements Comparable<SuccessorIdentifier> {
     public static final double DEFAULT_NOMINAL_VALUE = -1.0;
     private final boolean isNumeric;
     private final Double selectorValue;
@@ -140,5 +141,10 @@ public class SuccessorIdentifier implements Comparable<SuccessorIdentifier> {
             String s = "%b%f%f";
             return String.format(s, false, referenceValue, selectorValue);
         }
+    }
+
+    @Override
+    public void getDescription(StringBuilder sb, int indent) {
+
     }
 }

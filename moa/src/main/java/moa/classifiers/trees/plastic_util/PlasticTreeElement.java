@@ -1,12 +1,5 @@
 package moa.classifiers.trees.plastic_util;
 
-import com.yahoo.labs.samoa.instances.Attribute;
-import moa.classifiers.core.attributeclassobservers.AttributeClassObserver;
-import moa.core.AutoExpandVector;
-import moa.core.DoubleVector;
-
-import java.util.LinkedList;
-
 public class PlasticTreeElement {
     private PlasticNode node;
     private SuccessorIdentifier key;
@@ -39,7 +32,11 @@ public class PlasticTreeElement {
     }
 
     public PlasticTreeElement copy() {
-        PlasticNode nodeCpy = new PlasticNode(node);
+        PlasticNode nodeCpy;
+        if (node instanceof AdaptivePlasticNode)
+            nodeCpy = new AdaptivePlasticNode((AdaptivePlasticNode) node);
+        else
+            nodeCpy = new PlasticNode(node);
         SuccessorIdentifier keyCpy = key != null ? new SuccessorIdentifier(key) : null;
         return new PlasticTreeElement(nodeCpy, keyCpy);
     }

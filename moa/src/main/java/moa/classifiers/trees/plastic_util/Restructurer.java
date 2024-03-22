@@ -1,15 +1,15 @@
 package moa.classifiers.trees.plastic_util;
 
 import com.yahoo.labs.samoa.instances.Attribute;
+import moa.AbstractMOAObject;
 import moa.classifiers.core.AttributeSplitSuggestion;
-import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
 import moa.classifiers.core.conditionaltests.NominalAttributeBinaryTest;
 import moa.classifiers.core.conditionaltests.NominalAttributeMultiwayTest;
 import moa.core.DoubleVector;
 
 import java.util.*;
 
-public class Restructurer {
+public class Restructurer extends AbstractMOAObject {
     private final int maxBranchLength;
     private final double acceptedThresholdDeviation;
 
@@ -45,7 +45,7 @@ public class Restructurer {
             }
         }
 
-//        node.collectChildrenSplitAttributes();
+        node.collectChildrenSplitAttributes();
         MappedTree mappedTree = new MappedTree(node, splitAttribute, splitAttributeIndex, splitValue, maxBranchLength);
         PlasticNode newRoot = reassembleTree(mappedTree);
 
@@ -221,6 +221,10 @@ public class Restructurer {
         node.seenWeight = 0.0;
         node.nodeTime = 0;
         node.numSplitAttempts = 0;
+        if (node instanceof AdaptivePlasticNode) {
+            ((AdaptivePlasticNode) node).removeBackgroundLearner();
+            ((AdaptivePlasticNode) node).resetChangeDetector();
+        }
         if (!node.isLeaf())
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
     }
@@ -238,9 +242,9 @@ public class Restructurer {
             if (thisNode.isDummy()) {
                 node.getSuccessors().removeSuccessor(key);
             }
-            if (thisNode.isArtificial()) {
-                node.getSuccessors().removeSuccessor(key);
-            }
+//            if (thisNode.isArtificial()) {
+//                node.getSuccessors().removeSuccessor(key);
+//            }
             if (!thisNode.isPure())
                 allSuccessorsArePure = false;
         }
@@ -319,4 +323,7 @@ public class Restructurer {
         node.setRestructuredFlag();
         node.getSuccessors().getAllSuccessors().forEach(s -> setRestructuredFlagInSubtree((PlasticNode) s));
     }
+
+    @Override
+    public void getDescription(StringBuilder sb, int indent) {}
 }
