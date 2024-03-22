@@ -19,14 +19,6 @@ public class PLASTIC extends EFDT implements PerformsTreeRevision, MeasuresNumbe
             "Maximum allowed length of branches during restructuring.",
             5, 1, Integer.MAX_VALUE);
 
-    public FloatOption acceptedNumericThresholdDeviationOption = new FloatOption("acceptedNumericThresholdDeviation",
-            'Z', "The accepted deviation between the current numeric threshold of a node and the desired threshold. If the absolute difference is smaller, we keep the successors and simply adjust the threshold.",
-            0.05, 0.0, 1_000_000.0);
-
-    public PLASTIC() {
-        super();
-    }
-
     @Override
     PlasticNode createRoot() {
         return new PlasticNode(
@@ -48,7 +40,7 @@ public class PLASTIC extends EFDT implements PerformsTreeRevision, MeasuresNumbe
                 new DoubleVector(),
                 new ArrayList<>(),
                 maxBranchLengthOption.getValue(),
-                acceptedNumericThresholdDeviationOption.getValue(),
+                0.05,
                 -1
         );
     }
