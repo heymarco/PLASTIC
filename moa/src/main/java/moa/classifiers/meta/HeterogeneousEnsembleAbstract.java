@@ -73,7 +73,7 @@ public abstract class HeterogeneousEnsembleAbstract extends AbstractClassifier i
 	public ListOption baselearnersOption = new ListOption("baseClassifiers", 'b',
 			"The classifiers the ensemble consists of.",
 			new ClassOption("learner", ' ', "", Classifier.class,
-					"trees.HoeffdingTree"),
+					"trees.MOAHoeffdingTree"),
 			new Option[] {
 					new ClassOption("", ' ', "", Classifier.class, "bayes.NaiveBayes"),
 					new ClassOption("", ' ', "", Classifier.class,
@@ -81,7 +81,7 @@ public abstract class HeterogeneousEnsembleAbstract extends AbstractClassifier i
 					new ClassOption("", ' ', "", Classifier.class, "functions.SGD"),
 					new ClassOption("", ' ', "", Classifier.class, "lazy.kNN"),
 					new ClassOption("", ' ', "", Classifier.class,
-							"trees.HoeffdingTree") },
+							"trees.MOAHoeffdingTree") },
 			',');
 
 	public IntOption gracePerionOption = new IntOption("gracePeriod", 'g',

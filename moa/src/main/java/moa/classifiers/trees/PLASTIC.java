@@ -11,7 +11,7 @@ import moa.core.DoubleVector;
 
 import java.util.ArrayList;
 
-public class PLASTIC extends CustomEFDT implements PerformsTreeRevision, MeasuresNumberOfLeaves {
+public class PLASTIC extends EFDT implements PerformsTreeRevision, MeasuresNumberOfLeaves {
 
     public IntOption maxBranchLengthOption = new IntOption(
             "maxBranchLength",
@@ -25,10 +25,6 @@ public class PLASTIC extends CustomEFDT implements PerformsTreeRevision, Measure
 
     public PLASTIC() {
         super();
-        // Place to override options from EFDT
-        relMinDeltaG = new FloatOption("relMinDeltaG",
-                'G', "Relative minimum information gain to split a tie during reevaluation.",
-                0.0, 0.0, 1.0);
     }
 
     @Override
@@ -37,17 +33,17 @@ public class PLASTIC extends CustomEFDT implements PerformsTreeRevision, Measure
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
-                adaptiveConfidenceOption.getValue(),
-                useAdaptiveConfidenceOption.isSet(),
-                leafpredictionOption.getChosenLabel(),
+                0.2,
+                false,
+                "MC",
                 reEvalPeriodOption.getValue(),
                 0,
                 maxDepthOption.getValue(),
                 tieThresholdOption.getValue(),
                 tieThresholdReevalOption.getValue(),
-                relMinDeltaG.getValue(),
+                0.5,
                 binarySplitsOption.isSet(),
-                noPrePruneOption.isSet(),
+                true,
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
                 new ArrayList<>(),

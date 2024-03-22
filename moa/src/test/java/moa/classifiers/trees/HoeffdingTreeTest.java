@@ -51,10 +51,10 @@ public class HoeffdingTreeTest
    */
   @Override
   protected Classifier[] getRegressionClassifierSetups() {
-    HoeffdingTree[]	result;
-    result    = new HoeffdingTree[2];
-    result[0] = new HoeffdingTree();
-    result[1] = new HoeffdingTree();
+    MOAHoeffdingTree[]	result;
+    result    = new MOAHoeffdingTree[2];
+    result[0] = new MOAHoeffdingTree();
+    result[1] = new MOAHoeffdingTree();
     result[1].tieThresholdOption.setValue(0.2);
     
     return result;

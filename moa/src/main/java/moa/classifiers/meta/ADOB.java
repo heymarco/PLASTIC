@@ -63,7 +63,7 @@ public class ADOB extends AbstractClassifier implements MultiClassClassifier {
 
     public ClassOption baseLearnerOption = new ClassOption("baseLearner", 'l',
             "Classifier to train.", Classifier.class,
-            "drift.SingleClassifierDrift -l trees.HoeffdingTree -d ADWINChangeDetector");
+            "drift.SingleClassifierDrift -l trees.MOAHoeffdingTree -d ADWINChangeDetector");
 
     public IntOption ensembleSizeOption = new IntOption("ensembleSize", 's',
             "The number of models to boost.", 10, 1, Integer.MAX_VALUE);

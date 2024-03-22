@@ -32,7 +32,7 @@ public class WriteConfigurationToJupyterNotebook extends AuxiliarMainTask {
     private static final long serialVersionUID = 1L;
 
     public ClassOption taskOption = new ClassOption("task", 't',
-            "Task to do.", Task.class, "EvaluateInterleavedTestThenTrain -l trees.HoeffdingTree -s (ArffFileStream -f H:/MLProject/Dataset/elecNormNew.arff) -i 1000000 -f 10000");
+            "Task to do.", Task.class, "EvaluateInterleavedTestThenTrain -l trees.MOAHoeffdingTree -s (ArffFileStream -f H:/MLProject/Dataset/elecNormNew.arff) -i 1000000 -f 10000");
 
     public FileOption notebookOutputFile = new FileOption("NotebookFile", 'j',
             "Destination Jupyter NotebookBuilder file.", null, "ipynb", true);

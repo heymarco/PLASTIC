@@ -12,21 +12,21 @@ import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserv
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
 import moa.classifiers.trees.plastic_util.CustomEFDTNode;
+import moa.classifiers.trees.plastic_util.CustomHTNode;
 import moa.classifiers.trees.plastic_util.MeasuresNumberOfLeaves;
-import moa.classifiers.trees.plastic_util.PerformsTreeRevision;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.options.ClassOption;
 
 import java.util.ArrayList;
 
-public class CustomEFDT extends AbstractClassifier implements MultiClassClassifier, PerformsTreeRevision, MeasuresNumberOfLeaves {
+public class HT extends AbstractClassifier implements MultiClassClassifier, MeasuresNumberOfLeaves {
 
     private static final long serialVersionUID = 3L;
 
     @Override
     public String getPurposeString() {
-        return "Lightweight Implementation of EFDT";
+        return "Lightweight Implementation of HT";
     }
 
 
@@ -37,12 +37,6 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
             "gracePeriod",
             'g',
             "The number of instances a leaf should observe between split attempts.",
-            200, 0, Integer.MAX_VALUE);
-
-    public IntOption reEvalPeriodOption = new IntOption(
-            "reevaluationPeriod",
-            'R',
-            "The number of instances an internal node should observe between re-evaluation attempts.",
             200, 0, Integer.MAX_VALUE);
 
     public ClassOption nominalEstimatorOption = new ClassOption("nominalEstimator",
@@ -59,36 +53,28 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
             "The allowable error in split decision when using fixed confidence. Values closer to 0 will take longer to decide.",
             0.001, 0.0, 1.0);
 
-    public FloatOption adaptiveConfidenceOption = new FloatOption(
-            "adaptiveSplitConfidence",
-            'C',
-            "The initial allowable error in split decision when using adaptive confidence. Values closer to 0 will take longer to decide.",
-            0.2, 0.0, 1.0);
-
-    public FlagOption useAdaptiveConfidenceOption = new FlagOption(
-            "useAdaptiveConfidence",
-            'a',
-            "Flag if confidence should be adaptive (decreasing over time).");
+//    public FloatOption adaptiveConfidenceOption = new FloatOption(
+//            "adaptiveSplitConfidence",
+//            'C',
+//            "The initial allowable error in split decision when using adaptive confidence. Values closer to 0 will take longer to decide.",
+//            0.2, 0.0, 1.0);
+//
+//    public FlagOption useAdaptiveConfidenceOption = new FlagOption(
+//            "useAdaptiveConfidence",
+//            'a',
+//            "Flag if confidence should be adaptive (decreasing over time).");
 
     public FloatOption tieThresholdOption = new FloatOption("tieThreshold",
             't', "Threshold below which a split will be forced to break ties.",
             0.05, 0.0, 1.0);
 
-    public FloatOption tieThresholdReevalOption = new FloatOption("tieThresholdReevaluation",
-            'T', "Threshold below which a split will be forced to break ties during reevaluation.",
-            0.05, 0.0, 1.0);
-
-    public FloatOption relMinDeltaG = new FloatOption("relMinDeltaG",
-            'G', "Relative minimum information gain to split a tie during reevaluation.",
-            0.5, 0.0, 1.0);
-
     public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             "Only allow binary splits.");
 
-    public MultiChoiceOption leafpredictionOption = new MultiChoiceOption(
-            "leafprediction", 'l', "Leaf prediction to use.", new String[]{
-            "MC", "NB"}, new String[]{
-            "Majority class", "Naive Bayes"}, 0);
+//    public MultiChoiceOption leafpredictionOption = new MultiChoiceOption(
+//            "leafprediction", 'l', "Leaf prediction to use.", new String[]{
+//            "MC", "NB"}, new String[]{
+//            "Majority class", "Naive Bayes"}, 0);
 
     public IntOption maxDepthOption = new IntOption(
             "maxDepth",
@@ -96,26 +82,23 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
             "Maximum allowed depth of tree.",
             20, 0, Integer.MAX_VALUE);
 
-    public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
-            "Disable pre-pruning.");
+//    public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
+//            "Disable pre-pruning.");
 
 
-    CustomEFDTNode createRoot() {
-        return new CustomEFDTNode(
+    private CustomHTNode createRoot() {
+        return new CustomHTNode(
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
-                adaptiveConfidenceOption.getValue(),
-                useAdaptiveConfidenceOption.isSet(),
-                leafpredictionOption.getChosenLabel(),
-                reEvalPeriodOption.getValue(),
+                0.2,
+                false,
+                "MC",
                 0,
                 maxDepthOption.getValue(),
                 tieThresholdOption.getValue(),
-                tieThresholdReevalOption.getValue(),
-                relMinDeltaG.getValue(),
                 binarySplitsOption.isSet(),
-                noPrePruneOption.isSet(),
+                true,
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
                 new ArrayList<>(),
@@ -165,11 +148,6 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
     @Override
     public boolean isRandomizable() {
         return false;
-    }
-
-    @Override
-    public boolean didPerformTreeRevision() {
-        return root.didPerformTreeRevision();
     }
 
     @Override

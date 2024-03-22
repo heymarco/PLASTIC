@@ -25,7 +25,6 @@ import java.util.Set;
 import moa.classifiers.Classifier;
 import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.classifiers.trees.HoeffdingTree;
 import moa.options.ClassOption;
 import com.yahoo.labs.samoa.instances.Instance;
 
@@ -38,7 +37,7 @@ import com.yahoo.labs.samoa.instances.Instance;
  * 
  * 
  */ 
-public class HoeffdingTreeClassifLeaves extends HoeffdingTree {
+public class HoeffdingTreeClassifLeaves extends MOAHoeffdingTree {
 
     private static final long serialVersionUID = 1L;
 
@@ -67,7 +66,7 @@ public class HoeffdingTreeClassifLeaves extends HoeffdingTree {
         }
 	
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             if (getWeightSeen() >= ((HoeffdingTreeClassifLeaves) ht).nbThresholdOption.getValue()) {
                 return this.classifier.getVotesForInstance(inst);
             }
@@ -80,7 +79,7 @@ public class HoeffdingTreeClassifLeaves extends HoeffdingTree {
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             this.classifier.trainOnInstance(inst);
             super.learnFromInstance(inst, ht);
         }

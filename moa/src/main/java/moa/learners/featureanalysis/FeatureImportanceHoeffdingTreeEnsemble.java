@@ -5,7 +5,7 @@ import moa.capabilities.CapabilitiesHandler;
 import moa.classifiers.AbstractClassifier;
 import moa.classifiers.Classifier;
 import moa.classifiers.MultiClassClassifier;
-import moa.classifiers.trees.HoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree;
 import moa.core.Measurement;
 import moa.core.Utils;
 import moa.options.ClassOption;
@@ -58,7 +58,7 @@ public class FeatureImportanceHoeffdingTreeEnsemble extends AbstractClassifier i
 
             for(int i = 0 ; i < subClassifiers.length ; ++i) {
                 subFeatureImportanceWrapper[i] = (FeatureImportanceHoeffdingTree) this.htFeatureImportanceBase.copy();
-                subFeatureImportanceWrapper[i].treeLearner = (HoeffdingTree) subClassifiers[i];
+                subFeatureImportanceWrapper[i].treeLearner = (MOAHoeffdingTree) subClassifiers[i];
                 if(subFeatureImportanceWrapper[i].featureImportances == null) {
                     if (this.featureImportances != null)
                         subFeatureImportanceWrapper[i].featureImportances = new double[this.featureImportances.length];

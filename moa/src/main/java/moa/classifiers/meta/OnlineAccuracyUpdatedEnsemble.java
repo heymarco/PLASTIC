@@ -26,7 +26,7 @@ import com.yahoo.labs.samoa.instances.Instance;
 import moa.classifiers.AbstractClassifier;
 import moa.classifiers.Classifier;
 import moa.classifiers.MultiClassClassifier;
-import moa.classifiers.trees.HoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.core.ObjectRepository;
@@ -46,7 +46,7 @@ public class OnlineAccuracyUpdatedEnsemble extends AbstractClassifier implements
 	 * Type of classifier to use as a component classifier.
 	 */
 	public ClassOption learnerOption = new ClassOption("learner", 'l', "Classifier to train.", Classifier.class, 
-			"trees.HoeffdingTree -e 2000000 -g 100 -c 0.01");
+			"trees.MOAHoeffdingTree -e 2000000 -g 100 -c 0.01");
 
 	/**
 	 * Number of component classifiers.
@@ -269,9 +269,9 @@ public class OnlineAccuracyUpdatedEnsemble extends AbstractClassifier implements
 		double memoryLimit = this.maxByteSizeOption.getValue() / (double) (this.ensemble.length + 1);
 
 		for (int i = 0; i < this.ensemble.length; i++) {
-			((HoeffdingTree) this.ensemble[(int) this.weights[i][1]].classifier).maxByteSizeOption.setValue((int) Math
+			((MOAHoeffdingTree) this.ensemble[(int) this.weights[i][1]].classifier).maxByteSizeOption.setValue((int) Math
 					.round(memoryLimit));
-			((HoeffdingTree) this.ensemble[(int) this.weights[i][1]].classifier).enforceTrackerLimit();
+			((MOAHoeffdingTree) this.ensemble[(int) this.weights[i][1]].classifier).enforceTrackerLimit();
 		}
 	}
 

@@ -6,7 +6,7 @@ import moa.capabilities.CapabilitiesHandler;
 import moa.classifiers.AbstractClassifier;
 import moa.classifiers.MultiClassClassifier;
 import moa.classifiers.core.splitcriteria.InfoGainSplitCriterion;
-import moa.classifiers.trees.HoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree;
 import moa.core.Measurement;
 import moa.core.Utils;
 import moa.options.ClassOption;
@@ -35,8 +35,8 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
         CapabilitiesHandler, FeatureImportanceClassifier {
 
     public ClassOption treeLearnerOption = new ClassOption("treeLearner", 'l',
-            "Decision Tree learner.", HoeffdingTree.class,
-            "HoeffdingTree");
+            "Decision Tree learner.", MOAHoeffdingTree.class,
+            "MOAHoeffdingTree");
 
     // MDI: Mean Decrease in Impurity, COVER: Number of instances reaching a node.
     public MultiChoiceOption featureImportanceOption = new MultiChoiceOption("featureImportance", 'o',
@@ -45,7 +45,7 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
             new String[]{"MDI", "COVER"}, 0);
 
     // The internal tree learner object
-    protected HoeffdingTree treeLearner = null;
+    protected MOAHoeffdingTree treeLearner = null;
 
     // Used for feature importance calculation.
     protected double[] featureImportances;
@@ -114,9 +114,9 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
     }
 
     // TODO: Merge this method and calcMeanDecreaseImpurity as they are very similar in their structure.
-    private void calcMeanCover(HoeffdingTree.Node node) {
-        if (node instanceof HoeffdingTree.SplitNode) {
-            HoeffdingTree.SplitNode splitNode = (HoeffdingTree.SplitNode) node;
+    private void calcMeanCover(MOAHoeffdingTree.Node node) {
+        if (node instanceof MOAHoeffdingTree.SplitNode) {
+            MOAHoeffdingTree.SplitNode splitNode = (MOAHoeffdingTree.SplitNode) node;
             int attributeIndex = splitNode.getSplitTest().getAttsTestDependsOn()[0];
 
             if (this.featureImportances.length <= attributeIndex) {
@@ -126,22 +126,22 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
 
             this.featureImportances[attributeIndex] += calcNodeCover(splitNode);
 
-            for (HoeffdingTree.Node childNode : splitNode.getChildren()) {
+            for (MOAHoeffdingTree.Node childNode : splitNode.getChildren()) {
                 if (childNode != null)
                     calcMeanCover(childNode);
             }
         }
     }
 
-    public double calcNodeCover(HoeffdingTree.SplitNode splitNode) {
+    public double calcNodeCover(MOAHoeffdingTree.SplitNode splitNode) {
         double[] thisNodeClassDistributionAtLeaves = splitNode
                 .getObservedClassDistributionAtLeavesReachableThroughThisNode();
         return Utils.sum(thisNodeClassDistributionAtLeaves);
     }
 
-    private void calcMeanDecreaseImpurity(HoeffdingTree.Node node) {
-        if (node instanceof HoeffdingTree.SplitNode) {
-            HoeffdingTree.SplitNode splitNode = (HoeffdingTree.SplitNode) node;
+    private void calcMeanDecreaseImpurity(MOAHoeffdingTree.Node node) {
+        if (node instanceof MOAHoeffdingTree.SplitNode) {
+            MOAHoeffdingTree.SplitNode splitNode = (MOAHoeffdingTree.SplitNode) node;
             int attributeIndex = splitNode.getSplitTest().getAttsTestDependsOn()[0];
 
             if (this.featureImportances.length <= attributeIndex) {
@@ -151,21 +151,21 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
 
             this.featureImportances[attributeIndex] += calcNodeDecreaseImpurity(splitNode);
 
-            for (HoeffdingTree.Node childNode : splitNode.getChildren()) {
+            for (MOAHoeffdingTree.Node childNode : splitNode.getChildren()) {
                 if (childNode != null)
                     calcMeanDecreaseImpurity(childNode);
             }
         }
     }
 
-    public double calcNodeDecreaseImpurity(HoeffdingTree.SplitNode splitNode) {
+    public double calcNodeDecreaseImpurity(MOAHoeffdingTree.SplitNode splitNode) {
         double[] thisNodeClassDistributionAtLeaves = splitNode
                 .getObservedClassDistributionAtLeavesReachableThroughThisNode();
         double thisNodeEntropy = InfoGainSplitCriterion.computeEntropy(thisNodeClassDistributionAtLeaves);
         double sumChildrenImpurityDecrease = 0;
         double thisNodeWeight = Utils.sum(thisNodeClassDistributionAtLeaves);
 
-        for (HoeffdingTree.Node childNode : splitNode.getChildren()) {
+        for (MOAHoeffdingTree.Node childNode : splitNode.getChildren()) {
             if (childNode != null) {
                 int childNumInstances = (int) Utils.sum(childNode
                         .getObservedClassDistributionAtLeavesReachableThroughThisNode());
@@ -191,7 +191,7 @@ public class FeatureImportanceHoeffdingTree extends AbstractClassifier implement
         this.featureImportances = null;
         this.nodeCountAtLastFeatureImportanceInquiry = 0;
         this.featureImportancesInquiries = 0;
-        this.treeLearner = (HoeffdingTree) getPreparedClassOption(this.treeLearnerOption);
+        this.treeLearner = (MOAHoeffdingTree) getPreparedClassOption(this.treeLearnerOption);
         this.treeLearner.resetLearning();
     }
 

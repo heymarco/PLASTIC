@@ -53,7 +53,7 @@ public class HeterogeneousEnsembleBlastTest
 		// checks whether differently initialized ensembles are what they claim to
 		// be.
 
-		String[] ensembleComposition = { "trees.HoeffdingTree", "bayes.NaiveBayes",
+		String[] ensembleComposition = { "trees.MOAHoeffdingTree", "bayes.NaiveBayes",
 				"functions.Perceptron" };
 
 		HeterogeneousEnsembleBlastFadingFactors ff = new HeterogeneousEnsembleBlastFadingFactors();

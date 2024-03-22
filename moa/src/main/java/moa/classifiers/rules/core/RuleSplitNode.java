@@ -20,7 +20,7 @@
 package moa.classifiers.rules.core;
 
 import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
-import moa.classifiers.trees.HoeffdingTree.SplitNode;
+import moa.classifiers.trees.MOAHoeffdingTree.SplitNode;
 
 import com.yahoo.labs.samoa.instances.Instance;
 

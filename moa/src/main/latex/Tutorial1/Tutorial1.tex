@@ -255,11 +255,11 @@ Example:
 An easy way to use the command line, is to copy and paste the text in the Configuration line of the Graphical User Interface.% at the end of
 
 For example, suppose we want to process the task 
-\begin{verbatim}EvaluatePrequential -l trees.HoeffdingTree -i 1000000 -w 10000\end{verbatim} 
+\begin{verbatim}EvaluatePrequential -l trees.MOAHoeffdingTree -i 1000000 -w 10000\end{verbatim}
 using the command line. We simply write 
 \begin{verbatim}
 java -cp moa.jar -javaagent:sizeofag.jar moa.DoTask  \
-"EvaluatePrequential -l trees.HoeffdingTree -i 1000000 -w 10000"
+"EvaluatePrequential -l trees.MOAHoeffdingTree -i 1000000 -w 10000"
 \end{verbatim}
 
 Note that some parameters are missing, since they use default values.
@@ -271,7 +271,7 @@ The \verb+moa.DoTask+ class is the main class for running tasks on the command l
 
 \begin{verbatim}
 java -cp moa.jar -javaagent:sizeofag.jar moa.DoTask \
-  LearnModel -l trees.HoeffdingTree \
+  LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000 -O model1.moa
 \end{verbatim}
 
@@ -299,7 +299,7 @@ Note the the above two steps can be achieved by rolling them into one, avoiding 
 
 \begin{verbatim}
 java -cp moa.jar -javaagent:sizeofag.jar moa.DoTask \
-  "EvaluateModel -m (LearnModel -l trees.HoeffdingTree \
+  "EvaluateModel -m (LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000) \
   -s (generators.WaveformGenerator -i 2) -i 1000000"
 \end{verbatim}
@@ -309,7 +309,7 @@ The following command creates a {\em comma separated values} file, training the 
 
 \begin{verbatim}
 java -cp moa.jar -javaagent:sizeofag.jar moa.DoTask \
-  "EvaluatePeriodicHeldOutTest -l trees.HoeffdingTree \
+  "EvaluatePeriodicHeldOutTest -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -n 100000 -i 10000000 -f 1000000" > dsresult.csv
 \end{verbatim}
@@ -345,10 +345,10 @@ Compare accuracy and RAM-Hours needed using a prequential evaluation (sliding wi
       \end{itemize}
 \item \begin{itemize}
         \item \texttt{EvaluateInterleavedTestThenTrain -i 1000000}
-	\item \texttt{EvaluateInterleavedTestThenTrain -l trees.HoeffdingTree -i 1000000}
+	\item \texttt{EvaluateInterleavedTestThenTrain -l trees.MOAHoeffdingTree -i 1000000}
 	\item \texttt{EvaluatePeriodicHeldOutTest -n 1000 -i 1000000}
-	\item \texttt{EvaluateInterleavedTestThenTrain -l trees.HoeffdingTree -i 1000000}
-	\item \texttt{EvaluatePrequential -l trees.HoeffdingTree -i 1000000}
+	\item \texttt{EvaluateInterleavedTestThenTrain -l trees.MOAHoeffdingTree -i 1000000}
+	\item \texttt{EvaluatePrequential -l trees.MOAHoeffdingTree -i 1000000}
        \end{itemize}
 \item \begin{itemize}
  \item

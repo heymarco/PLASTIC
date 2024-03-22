@@ -19,27 +19,8 @@
  */
 package moa.classifiers.trees;
 
-import com.github.javacliparser.FlagOption;
-import com.github.javacliparser.FloatOption;
-import com.github.javacliparser.IntOption;
-import com.github.javacliparser.MultiChoiceOption;
-import com.yahoo.labs.samoa.instances.Instance;
-import moa.AbstractMOAObject;
-import moa.capabilities.CapabilitiesHandler;
-import moa.capabilities.Capability;
-import moa.capabilities.ImmutableCapabilities;
-import moa.classifiers.AbstractClassifier;
-import moa.classifiers.MultiClassClassifier;
-import moa.classifiers.bayes.NaiveBayes;
 import moa.classifiers.core.AttributeSplitSuggestion;
-import moa.classifiers.core.attributeclassobservers.AttributeClassObserver;
-import moa.classifiers.core.attributeclassobservers.DiscreteAttributeClassObserver;
-import moa.classifiers.core.attributeclassobservers.NullAttributeClassObserver;
-import moa.classifiers.core.attributeclassobservers.NumericAttributeClassObserver;
-import moa.classifiers.core.conditionaltests.InstanceConditionalTest;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.core.*;
-import moa.options.ClassOption;
 
 import java.util.*;
 
@@ -87,7 +68,7 @@ import java.util.*;
  * @author Richard Kirkby (rkirkby@cs.waikato.ac.nz)
  * @version $Revision: 7 $
  */
-public class EagerHoeffdingTree extends HoeffdingTree {
+public class EagerHoeffdingTree extends MOAHoeffdingTree {
 
     protected void attemptToSplit(ActiveLearningNode node, SplitNode parent,
             int parentIndex) {

@@ -52,7 +52,7 @@ import com.yahoo.labs.samoa.instances.Instance;
  * @author Albert Bifet (abifet at cs dot waikato dot ac dot nz)
  * @version $Revision: 7 $
  */
-public class HoeffdingAdaptiveTree extends HoeffdingTree {
+public class HoeffdingAdaptiveTree extends MOAHoeffdingTree {
 
     private static final long serialVersionUID = 1L;
 
@@ -403,7 +403,7 @@ public class HoeffdingAdaptiveTree extends HoeffdingTree {
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             double[] dist;
             int predictionOption = ((HoeffdingAdaptiveTree) ht).leafpredictionOption.getChosenIndex();
             if (predictionOption == 0) { //MC

@@ -33,10 +33,7 @@ public class PlasticTreeElement {
 
     public PlasticTreeElement copy() {
         PlasticNode nodeCpy;
-        if (node instanceof AdaptivePlasticNode)
-            nodeCpy = new AdaptivePlasticNode((AdaptivePlasticNode) node);
-        else
-            nodeCpy = new PlasticNode(node);
+        nodeCpy = new PlasticNode(node);
         SuccessorIdentifier keyCpy = key != null ? new SuccessorIdentifier(key) : null;
         return new PlasticTreeElement(nodeCpy, keyCpy);
     }

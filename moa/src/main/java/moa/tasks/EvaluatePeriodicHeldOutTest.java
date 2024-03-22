@@ -63,7 +63,7 @@ public class EvaluatePeriodicHeldOutTest extends ClassificationMainTask {
     private static final long serialVersionUID = 1L;
 
     public ClassOption learnerOption = new ClassOption("learner", 'l',
-            "Classifier to train.", MultiClassClassifier.class, "moa.classifiers.trees.HoeffdingTree");
+            "Classifier to train.", MultiClassClassifier.class, "moa.classifiers.trees.MOAHoeffdingTree");
 
     public ClassOption streamOption = new ClassOption("stream", 's',
             "Stream to learn from.", ExampleStream.class,

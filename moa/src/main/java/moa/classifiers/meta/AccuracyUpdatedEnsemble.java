@@ -22,7 +22,7 @@ package moa.classifiers.meta;
 import moa.classifiers.AbstractClassifier;
 import moa.classifiers.Classifier;
 import moa.classifiers.MultiClassClassifier;
-import moa.classifiers.trees.HoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree;
 import moa.core.DoubleVector;
 import moa.core.Measurement;
 import moa.core.ObjectRepository;
@@ -45,7 +45,7 @@ public class AccuracyUpdatedEnsemble extends AbstractClassifier implements Multi
 	 * Type of classifier to use as a component classifier.
 	 */
 	public ClassOption learnerOption = new ClassOption("learner", 'l', "Classifier to train.", Classifier.class, 
-			"trees.HoeffdingTree -e 2000000 -g 100 -c 0.01");
+			"trees.MOAHoeffdingTree -e 2000000 -g 100 -c 0.01");
 
 	/**
 	 * Number of component classifiers.
@@ -210,7 +210,7 @@ public class AccuracyUpdatedEnsemble extends AbstractClassifier implements Multi
 		this.candidate = (Classifier) getPreparedClassOption(this.learnerOption);
 		this.candidate.resetLearning();
 
-		if (this.candidate instanceof HoeffdingTree) {
+		if (this.candidate instanceof MOAHoeffdingTree) {
 			this.enforceMemoryLimit();
 		}
 	}
@@ -222,9 +222,9 @@ public class AccuracyUpdatedEnsemble extends AbstractClassifier implements Multi
 		double memoryLimit = this.maxByteSizeOption.getValue() / (double) (this.learners.length + 1);
 
 		for (int i = 0; i < this.learners.length; i++) {
-			((HoeffdingTree) this.learners[(int) this.weights[i][1]]).maxByteSizeOption.setValue((int) Math
+			((MOAHoeffdingTree) this.learners[(int) this.weights[i][1]]).maxByteSizeOption.setValue((int) Math
 					.round(memoryLimit));
-			((HoeffdingTree) this.learners[(int) this.weights[i][1]]).enforceTrackerLimit();
+			((MOAHoeffdingTree) this.learners[(int) this.weights[i][1]]).enforceTrackerLimit();
 		}
 	}
 

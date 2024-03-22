@@ -1,14 +1,8 @@
 package moa.classifiers.trees.plastic_util;
 
 import com.yahoo.labs.samoa.instances.Instance;
-import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.attributeclassobservers.NominalAttributeClassObserver;
-import moa.classifiers.core.driftdetection.ADWINChangeDetector;
-import moa.classifiers.core.driftdetection.ChangeDetector;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.classifiers.trees.EFHAT;
-import moa.classifiers.trees.HoeffdingAdaptiveTree;
-import moa.classifiers.trees.HoeffdingTree;
 import moa.core.DoubleVector;
 
 import java.util.LinkedList;

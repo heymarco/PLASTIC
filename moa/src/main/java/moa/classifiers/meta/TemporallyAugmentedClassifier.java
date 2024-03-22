@@ -55,7 +55,7 @@ public class TemporallyAugmentedClassifier extends AbstractClassifier implements
     private static final long serialVersionUID = 1L;
     
     public ClassOption baseLearnerOption = new ClassOption("baseLearner", 'l',
-            "Classifier to train.", Classifier.class, "trees.HoeffdingTree");
+            "Classifier to train.", Classifier.class, "trees.MOAHoeffdingTree");
     
     public IntOption numOldLabelsOption = new IntOption("numOldLabels", 'n',
             "The number of old labels to add to each example.", 1, 0, Integer.MAX_VALUE);

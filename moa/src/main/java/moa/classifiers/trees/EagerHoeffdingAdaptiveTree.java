@@ -403,7 +403,7 @@ public class EagerHoeffdingAdaptiveTree extends EagerHoeffdingTree {
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             double[] dist;
             int predictionOption = ((EagerHoeffdingAdaptiveTree) ht).leafpredictionOption.getChosenIndex();
             if (predictionOption == 0) { //MC
