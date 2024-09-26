@@ -24,8 +24,8 @@ import moa.classifiers.core.attributeclassobservers.AttributeClassObserver;
 import moa.classifiers.rules.AbstractAMRules;
 import moa.classifiers.rules.driftdetection.PageHinkleyFading;
 import moa.classifiers.rules.driftdetection.PageHinkleyTest;
-import moa.classifiers.trees.HoeffdingTree;
-import moa.classifiers.trees.HoeffdingTree.ActiveLearningNode;
+import moa.classifiers.trees.MOAHoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree.ActiveLearningNode;
 import moa.core.AutoExpandVector;
 import moa.core.DoubleVector;
 
@@ -93,10 +93,10 @@ public abstract class RuleActiveLearningNode extends ActiveLearningNode {
 	abstract public void learnFromInstance(Instance inst);
 
     /* (non-Javadoc)
-	 * @see moa.classifiers.rules.RuleActiveLearningNodeInterface#learnFromInstance(weka.core.Instance, moa.classifiers.trees.HoeffdingTree)
+	 * @see moa.classifiers.rules.RuleActiveLearningNodeInterface#learnFromInstance(weka.core.Instance, moa.classifiers.trees.MOAHoeffdingTree)
 	 */
 	@Override
-    public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+    public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
         learnFromInstance(inst);
     }
 

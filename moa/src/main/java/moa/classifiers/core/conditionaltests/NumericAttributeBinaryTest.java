@@ -45,6 +45,10 @@ public class NumericAttributeBinaryTest extends InstanceConditionalBinaryTest {
         this.equalsPassesTest = equalsPassesTest;
     }
 
+    public double getValue() {
+        return attValue;
+    }
+
     @Override
     public int branchForInstance(Instance inst) {
         int instAttIndex = this.attIndex ; // < inst.classIndex() ? this.attIndex

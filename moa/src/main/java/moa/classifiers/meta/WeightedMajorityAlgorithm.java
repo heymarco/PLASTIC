@@ -54,14 +54,14 @@ public class WeightedMajorityAlgorithm extends AbstractClassifier implements Mul
             'l',
             "The learners to combine.",
             new ClassOption("learner", ' ', "", Classifier.class,
-            "trees.HoeffdingTree"),
+            "trees.MOAHoeffdingTree"),
             new Option[]{
                 new ClassOption("", ' ', "", Classifier.class,
-                "trees.HoeffdingTree -l MC"),
+                "trees.MOAHoeffdingTree -l MC"),
                 new ClassOption("", ' ', "", Classifier.class,
-                "trees.HoeffdingTree -l NB"),
+                "trees.MOAHoeffdingTree -l NB"),
                 new ClassOption("", ' ', "", Classifier.class,
-                "trees.HoeffdingTree -l NBAdaptive"),
+                "trees.MOAHoeffdingTree -l NBAdaptive"),
                 new ClassOption("", ' ', "", Classifier.class, "bayes.NaiveBayes")},
             ',');
 

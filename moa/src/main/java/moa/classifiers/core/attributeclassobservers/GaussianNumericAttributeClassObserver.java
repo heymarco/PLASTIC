@@ -105,6 +105,17 @@ public class GaussianNumericAttributeClassObserver extends AbstractOptionHandler
         return bestSuggestion;
     }
 
+    public AttributeSplitSuggestion forceSplit(
+            SplitCriterion criterion, double[] preSplitDist, int attIndex, double threshold) {
+        AttributeSplitSuggestion bestSuggestion = null;
+        double[][] postSplitDists = getClassDistsResultingFromBinarySplit(threshold);
+        double merit = criterion.getMeritOfSplit(preSplitDist,
+                postSplitDists);
+        bestSuggestion = new AttributeSplitSuggestion(
+                new NumericAttributeBinaryTest(attIndex, threshold, true), postSplitDists, merit);
+        return bestSuggestion;
+    }
+
     public double[] getSplitPointSuggestions() {
         Set<Double> suggestedSplitValues = new TreeSet<Double>();
         double minValue = Double.POSITIVE_INFINITY;

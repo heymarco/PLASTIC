@@ -4,3 +4,7 @@
 *~
 *.bak
 
+/data
+
+*.jar
+*.csv

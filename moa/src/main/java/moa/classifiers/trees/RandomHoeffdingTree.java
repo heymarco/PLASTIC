@@ -30,7 +30,7 @@ import com.yahoo.labs.samoa.instances.Instance;
  * @author Albert Bifet (abifet at cs dot waikato dot ac dot nz)
  * @version $Revision: 7 $
  */
-public class RandomHoeffdingTree extends HoeffdingTree {
+public class RandomHoeffdingTree extends MOAHoeffdingTree {
 
     private static final long serialVersionUID = 1L;
 
@@ -52,7 +52,7 @@ public class RandomHoeffdingTree extends HoeffdingTree {
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             this.observedClassDistribution.addToValue((int) inst.classValue(),
                     inst.weight());
             if (this.listAttributes == null) {
@@ -95,7 +95,7 @@ public class RandomHoeffdingTree extends HoeffdingTree {
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             if (getWeightSeen() >= ht.nbThresholdOption.getValue()) {
                 return NaiveBayes.doNaiveBayesPrediction(inst,
                         this.observedClassDistribution,
@@ -123,7 +123,7 @@ public class RandomHoeffdingTree extends HoeffdingTree {
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             int trueClass = (int) inst.classValue();
             if (this.observedClassDistribution.maxIndex() == trueClass) {
                 this.mcCorrectWeight += inst.weight();
@@ -136,7 +136,7 @@ public class RandomHoeffdingTree extends HoeffdingTree {
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             if (this.mcCorrectWeight > this.nbCorrectWeight) {
                 return this.observedClassDistribution.getArrayCopy();
             }

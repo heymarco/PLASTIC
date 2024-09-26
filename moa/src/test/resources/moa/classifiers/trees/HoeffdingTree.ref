@@ -1,5 +1,5 @@
 --> classification-out0.arff
-moa.classifiers.trees.HoeffdingTree
+moa.classifiers.trees.MOAHoeffdingTree
 
 Index
   10000
@@ -214,7 +214,7 @@ Model measurements
 
 
 --> classification-out1.arff
-moa.classifiers.trees.HoeffdingTree -t 0.2
+moa.classifiers.trees.MOAHoeffdingTree -t 0.2
 
 Index
   10000

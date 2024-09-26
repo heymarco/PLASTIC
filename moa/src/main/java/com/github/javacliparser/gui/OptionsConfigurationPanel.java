@@ -21,7 +21,7 @@ package com.github.javacliparser.gui;
 
 import com.github.javacliparser.Option;
 import com.github.javacliparser.Options;
-import moa.classifiers.trees.HoeffdingTree;
+import moa.classifiers.trees.MOAHoeffdingTree;
 import moa.gui.GUIUtils;
 import moa.gui.LookAndFeel;
 import moa.options.OptionHandler;
@@ -234,7 +234,7 @@ public class OptionsConfigurationPanel extends JPanel {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         // Create and set up the content pane.
-        Options options = new HoeffdingTree().getOptions();
+        Options options = new MOAHoeffdingTree().getOptions();
         JPanel panel = new OptionsConfigurationPanel(null, options);
         // createLabelledOptionComponentListPanel(options
         // .getOptionArray(), null);

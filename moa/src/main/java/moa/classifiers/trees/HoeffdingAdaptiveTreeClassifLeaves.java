@@ -26,8 +26,6 @@ import java.util.Set;
 import moa.classifiers.Classifier;
 import moa.classifiers.core.AttributeSplitSuggestion;
 import moa.classifiers.core.splitcriteria.SplitCriterion;
-import moa.classifiers.trees.HoeffdingAdaptiveTree;
-import moa.classifiers.trees.HoeffdingTree;
 import moa.options.ClassOption;
 
 /**
@@ -163,7 +161,7 @@ public class HoeffdingAdaptiveTreeClassifLeaves extends HoeffdingAdaptiveTree {
 	}
 
 	@Override
-	public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+	public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
 	    if (getWeightSeen() >= ((HoeffdingAdaptiveTreeClassifLeaves) ht).nbThresholdOption.getValue()) {
 		return this.classifier.getVotesForInstance(inst);
 	    }
@@ -176,7 +174,7 @@ public class HoeffdingAdaptiveTreeClassifLeaves extends HoeffdingAdaptiveTree {
 	}
 
 	@Override
-	public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+	public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
 	    this.classifier.trainOnInstance(inst);
 	    super.learnFromInstance(inst, ht);
 	}

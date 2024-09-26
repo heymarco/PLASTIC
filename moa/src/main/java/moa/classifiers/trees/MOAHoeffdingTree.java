@@ -96,7 +96,7 @@ import com.yahoo.labs.samoa.instances.Instance;
  * @author Richard Kirkby (rkirkby@cs.waikato.ac.nz)
  * @version $Revision: 7 $
  */
-public class HoeffdingTree extends AbstractClassifier implements MultiClassClassifier,
+public class MOAHoeffdingTree extends AbstractClassifier implements MultiClassClassifier,
                                                                  CapabilitiesHandler {
 
     private static final long serialVersionUID = 1L;
@@ -217,7 +217,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             return this.observedClassDistribution.getArrayCopy();
         }
 
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             return this.observedClassDistribution.getArrayCopy();
         }
 
@@ -225,8 +225,8 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             return this.observedClassDistribution.numNonZeroEntries() < 2;
         }
 
-        public void describeSubtree(HoeffdingTree ht, StringBuilder out,
-                int indent) {
+        public void describeSubtree(MOAHoeffdingTree ht, StringBuilder out,
+                                    int indent) {
             StringUtils.appendIndented(out, indent, "Leaf ");
             out.append(ht.getClassNameString());
             out.append(" = ");
@@ -356,8 +356,8 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public void describeSubtree(HoeffdingTree ht, StringBuilder out,
-                int indent) {
+        public void describeSubtree(MOAHoeffdingTree ht, StringBuilder out,
+                                    int indent) {
             for (int branch = 0; branch < numChildren(); branch++) {
                 Node child = getChild(branch);
                 if (child != null) {
@@ -394,7 +394,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             super(initialClassObservations);
         }
 
-        public abstract void learnFromInstance(Instance inst, HoeffdingTree ht);
+        public abstract void learnFromInstance(Instance inst, MOAHoeffdingTree ht);
     }
 
     public static class InactiveLearningNode extends LearningNode {
@@ -406,7 +406,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             this.observedClassDistribution.addToValue((int) inst.classValue(),
                     inst.weight());
         }
@@ -422,6 +422,8 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         
         protected boolean isInitialized;
 
+        protected int samplesSeen = 0;
+
         public ActiveLearningNode(double[] initialClassObservations) {
             super(initialClassObservations);
             this.weightSeenAtLastSplitEvaluation = getWeightSeen();
@@ -435,11 +437,14 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             if (this.isInitialized == false) {
                 this.attributeObservers = new AutoExpandVector<AttributeClassObserver>(inst.numAttributes());
                 this.isInitialized = true;
             }
+
+            samplesSeen++;
+
             this.observedClassDistribution.addToValue((int) inst.classValue(),
                     inst.weight());
             for (int i = 0; i < inst.numAttributes() - 1; i++) {
@@ -466,7 +471,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         public AttributeSplitSuggestion[] getBestSplitSuggestions(
-                SplitCriterion criterion, HoeffdingTree ht) {
+                SplitCriterion criterion, MOAHoeffdingTree ht) {
             List<AttributeSplitSuggestion> bestSuggestions = new LinkedList<AttributeSplitSuggestion>();
             double[] preSplitDist = this.observedClassDistribution.getArrayCopy();
             if (!ht.noPrePruneOption.isSet()) {
@@ -567,8 +572,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
                     && (learningNode instanceof ActiveLearningNode)) {
                 ActiveLearningNode activeLearningNode = (ActiveLearningNode) learningNode;
                 double weightSeen = activeLearningNode.getWeightSeen();
-                if (weightSeen
-                        - activeLearningNode.getWeightSeenAtLastSplitEvaluation() >= this.gracePeriodOption.getValue()) {
+                if (weightSeen - activeLearningNode.getWeightSeenAtLastSplitEvaluation() >= this.gracePeriodOption.getValue()) {
                     attemptToSplit(activeLearningNode, foundNode.parent,
                             foundNode.parentBranch);
                     activeLearningNode.setWeightSeenAtLastSplitEvaluation(weightSeen);
@@ -671,7 +675,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
                 shouldSplit = bestSplitSuggestions.length > 0;
             } else {
                 double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
-                        this.splitConfidenceOption.getValue(), node.getWeightSeen());
+                        this.splitConfidenceOption.getValue(), node.samplesSeen);
                 AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
                 AttributeSplitSuggestion secondBestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 2];
                 if ((bestSuggestion.merit - secondBestSuggestion.merit > hoeffdingBound)
@@ -894,7 +898,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             if (getWeightSeen() >= ht.nbThresholdOption.getValue()) {
                 return NaiveBayes.doNaiveBayesPrediction(inst,
                         this.observedClassDistribution,
@@ -922,7 +926,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public void learnFromInstance(Instance inst, HoeffdingTree ht) {
+        public void learnFromInstance(Instance inst, MOAHoeffdingTree ht) {
             int trueClass = (int) inst.classValue();
             if (this.observedClassDistribution.maxIndex() == trueClass) {
                 this.mcCorrectWeight += inst.weight();
@@ -935,7 +939,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         @Override
-        public double[] getClassVotes(Instance inst, HoeffdingTree ht) {
+        public double[] getClassVotes(Instance inst, MOAHoeffdingTree ht) {
             if (this.mcCorrectWeight > this.nbCorrectWeight) {
                 return this.observedClassDistribution.getArrayCopy();
             }
@@ -963,7 +967,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
 
     @Override
     public ImmutableCapabilities defineImmutableCapabilities() {
-      if (this.getClass() == HoeffdingTree.class)
+      if (this.getClass() == MOAHoeffdingTree.class)
         return new ImmutableCapabilities(Capability.VIEW_STANDARD, Capability.VIEW_LITE);
       else
         return new ImmutableCapabilities(Capability.VIEW_STANDARD);

@@ -109,6 +109,32 @@ public class NominalAttributeClassObserver extends AbstractOptionHandler impleme
         return bestSuggestion;
     }
 
+    public AttributeSplitSuggestion forceSplit(
+            SplitCriterion criterion, double[] preSplitDist, int attIndex, boolean binary, Double splitValue) {
+        AttributeSplitSuggestion bestSuggestion;
+        int maxAttValsObserved = getMaxAttValsObserved();
+        if (!binary) {
+            double[][] postSplitDists = getClassDistsResultingFromMultiwaySplit(maxAttValsObserved);
+            double merit = criterion.getMeritOfSplit(preSplitDist,
+                    postSplitDists);
+            bestSuggestion = new AttributeSplitSuggestion(
+                    new NominalAttributeMultiwayTest(attIndex), postSplitDists,
+                    merit);
+            return bestSuggestion;
+        }
+        assert splitValue != null: "Split value is null";
+        if (splitValue >= maxAttValsObserved) {
+            return null;
+        }
+        double[][] postSplitDists = getClassDistsResultingFromBinarySplit(splitValue.intValue());
+        double merit = criterion.getMeritOfSplit(preSplitDist,
+                postSplitDists);
+        bestSuggestion = new AttributeSplitSuggestion(
+                new NominalAttributeBinaryTest(attIndex, splitValue.intValue()),
+                postSplitDists, merit);
+        return bestSuggestion;
+    }
+
     public int getMaxAttValsObserved() {
         int maxAttValsObserved = 0;
         for (DoubleVector attValDist : this.attValDistPerClass) {

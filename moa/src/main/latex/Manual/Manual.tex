@@ -402,7 +402,7 @@ specified  \verb+generators.WaveformGenerator+, which is a data stream generator
 
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  LearnModel -l trees.HoeffdingTree \
+  LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000 -O model1.moa
 \end{verbatim}\end{footnotesize}
 
@@ -430,7 +430,7 @@ Note the the above two steps can be achieved by rolling them into one, avoiding 
 
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluateModel -m (LearnModel -l trees.HoeffdingTree \
+  "EvaluateModel -m (LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000) \
   -s (generators.WaveformGenerator -i 2) -i 1000000"
 \end{verbatim}\end{footnotesize}
@@ -440,7 +440,7 @@ The following command creates a {\em comma separated values} file, training the 
 
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePeriodicHeldOutTest -l trees.HoeffdingTree \
+  "EvaluatePeriodicHeldOutTest -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -n 100000 -i 100000000 -f 1000000" > dsresult.csv
 \end{verbatim}\end{footnotesize}
@@ -449,7 +449,7 @@ java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
 the same problem:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePeriodicHeldOutTest -l (OzaBag -l trees.HoeffdingTree -s 10)\
+  "EvaluatePeriodicHeldOutTest -l (OzaBag -l trees.MOAHoeffdingTree -s 10)\
   -s generators.WaveformGenerator \
   -n 100000 -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}\end{footnotesize}
@@ -471,7 +471,7 @@ examples, and testing every one million examples, is the following:
 
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluateInterleavedTestThenTrain -l trees.HoeffdingTree \
+  "EvaluateInterleavedTestThenTrain -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}
@@ -494,7 +494,7 @@ java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
 
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePeriodicHeldOutTest -l trees.HoeffdingTree \
+  "EvaluatePeriodicHeldOutTest -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -n 100000 -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}\end{footnotesize}
@@ -896,7 +896,7 @@ Learns a model from a stream.
 Example:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  LearnModel -l trees.HoeffdingTree \
+  LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000 -O model1.moa
 \end{verbatim}\end{footnotesize}
 
@@ -916,7 +916,7 @@ Evaluates a static model on a stream.
 Example:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluateModel -m (LearnModel -l trees.HoeffdingTree \
+  "EvaluateModel -m (LearnModel -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator -m 1000000) \
   -s (generators.WaveformGenerator -i 2) -i 1000000"
 \end{verbatim}\end{footnotesize}
@@ -936,7 +936,7 @@ Evaluates a classifier on a stream by periodically testing on a heldout set.
 Example:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePeriodicHeldOutTest -l trees.HoeffdingTree \
+  "EvaluatePeriodicHeldOutTest -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -n 100000 -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}\end{footnotesize}
@@ -960,7 +960,7 @@ Evaluates a classifier on a stream by testing then training with each example in
 Example:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluateInterleavedTestThenTrain -l trees.HoeffdingTree \
+  "EvaluateInterleavedTestThenTrain -l trees.MOAHoeffdingTree \
   -s generators.WaveformGenerator \
   -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}
@@ -1005,14 +1005,14 @@ $n_i = 1$ since the loss $L_i$ is computed for every single example.
 Examples:
 \begin{footnotesize}\begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePrequential -l trees.HoeffdingTree \
+  "EvaluatePrequential -l trees.MOAHoeffdingTree \
   -e (WindowClassificationPerformanceEvaluator -w 10000) \
   -s generators.WaveformGenerator \
   -i 100000000 -f 1000000" > htresult.csv
 \end{verbatim}
 \begin{verbatim}
 java -Xmx4g -cp "lib/*" -javaagent:lib/sizeofag-1.1.0.jar moa.DoTask \
-  "EvaluatePrequential -l trees.HoeffdingTree \
+  "EvaluatePrequential -l trees.MOAHoeffdingTree \
   -e (FadingFactorClassificationPerformanceEvaluator -a .975) \
   -s generators.WaveformGenerator \
   -i 100000000 -f 1000000" > htresult.csv
@@ -1874,7 +1874,7 @@ Raphael Pelossof, Michael Jones, Ilia Vovsha, and Cynthia Rudin.
 
 Example:
 \begin{footnotesize}\begin{verbatim}
-OCBoost -l trees.HoeffdingTree -e 0.5
+OCBoost -l trees.MOAHoeffdingTree -e 0.5
 \end{verbatim}\end{footnotesize}
 
 Parameters:
@@ -2015,7 +2015,7 @@ Albert Bifet, Geoff Holmes, Bernhard Pfahringer, Richard Kirkby, and Ricard
 
 Example:
 \begin{footnotesize}\begin{verbatim}
-OzaBagAdwin -l trees.HoeffdingTree -s 10
+OzaBagAdwin -l trees.MOAHoeffdingTree -s 10
 \end{verbatim}\end{footnotesize}
 
 Parameters:
@@ -2300,7 +2300,7 @@ Manuel Baena-Garc\'{\i}a, Jos{\'e} del Campo-{\'A}vila, Ra\'ul Fidalgo, Albert
 
 Example:
 \begin{footnotesize}\begin{verbatim}
-SingleClassifierDrift -d EDDM -l trees.HoeffdingTree
+SingleClassifierDrift -d EDDM -l trees.MOAHoeffdingTree
 \end{verbatim}\end{footnotesize}
 
 Parameters:

@@ -56,7 +56,7 @@ public class BOLE extends AbstractClassifier implements MultiClassClassifier {
 
     public ClassOption baseLearnerOption = new ClassOption("baseLearner", 'l',
             "Classifier to train.", Classifier.class,
-            "drift.SingleClassifierDrift -l trees.HoeffdingTree -d (DDM -n 7 -w 1.2 -o 1.95)");
+            "drift.SingleClassifierDrift -l trees.MOAHoeffdingTree -d (DDM -n 7 -w 1.2 -o 1.95)");
 
     public IntOption ensembleSizeOption = new IntOption("ensembleSize", 's',
             "The number of models to boost.", 10, 1, Integer.MAX_VALUE);

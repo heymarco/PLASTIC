@@ -53,7 +53,7 @@ public class OnlineSmoothBoost extends AbstractClassifier implements MultiClassC
     }
 
     public ClassOption baseLearnerOption = new ClassOption("baseLearner", 'l',
-            "Classifier to train.", Classifier.class, "trees.HoeffdingTree");
+            "Classifier to train.", Classifier.class, "trees.MOAHoeffdingTree");
 
     public IntOption ensembleSizeOption = new IntOption("ensembleSize", 's',
             "The number of models to boost.", 10, 1, Integer.MAX_VALUE);

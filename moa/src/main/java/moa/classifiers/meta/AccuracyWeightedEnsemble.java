@@ -72,7 +72,7 @@ public class AccuracyWeightedEnsemble extends AbstractClassifier implements Mult
     /**
      * Type of classifier to use as a component classifier.
      */
-    public ClassOption learnerOption = new ClassOption("learner", 'l', "Classifier to train.", Classifier.class, "trees.HoeffdingTree -l NB -e 1000 -g 100 -c 0.01");
+    public ClassOption learnerOption = new ClassOption("learner", 'l', "Classifier to train.", Classifier.class, "trees.MOAHoeffdingTree -l NB -e 1000 -g 100 -c 0.01");
 
     /**
      * Number of component classifiers.
