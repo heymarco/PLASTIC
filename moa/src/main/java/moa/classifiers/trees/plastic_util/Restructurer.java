@@ -221,10 +221,6 @@ public class Restructurer extends AbstractMOAObject {
         node.seenWeight = 0.0;
         node.nodeTime = 0;
         node.numSplitAttempts = 0;
-        if (node instanceof AdaptivePlasticNode) {
-            ((AdaptivePlasticNode) node).removeBackgroundLearner();
-            ((AdaptivePlasticNode) node).resetChangeDetector();
-        }
         if (!node.isLeaf())
             node.successors.getAllSuccessors().forEach(s -> cleanupSubtree((PlasticNode) s));
     }

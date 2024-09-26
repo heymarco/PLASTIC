@@ -194,6 +194,12 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return bestSuggestions.toArray(new AttributeSplitSuggestion[bestSuggestions.size()]);
     }
 
+    /**
+     * Train on the provided instance. Re-evaluate the tree
+     *
+     * @param instance the instance to train on
+     * @param totalNumInstances the total number of instances observed so far. (not used in EFDT but might be overwritten by subclasses)
+     **/
     public void learnInstance(Instance instance, int totalNumInstances) {
         seenWeight += instance.weight();
         nodeTime++;
@@ -206,11 +212,20 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         if (!isLeaf() && nodeTime % minSamplesReevaluate == 0) {
             reevaluateSplit(instance);
         }
-        if (!isLeaf()) { //Do NOT! put this in the upper (!isleaf()) block. This is not the same since we might kill the subtree during reevaluation!
+        if (!isLeaf()) {
             propagateToSuccessors(instance, totalNumInstances);
         }
     }
 
+    /**
+     * Predict the provided instance
+     * <p>
+     *     Traverses the tree until reaching a leaf and then returns the class votes of that leaf.
+     * <p>
+     *
+     * @param instance the instance to predict
+     * @return the class votes
+     **/
     public double[] predict(Instance instance) {
         if (!isLeaf()) {
             CustomEFDTNode successor = getSuccessor(instance);
@@ -221,6 +236,12 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return getClassVotes();
     }
 
+    /**
+     * Finds the successor of the current node based on the provided instance.
+     *
+     * @param instance the instance
+     * @return the successor node if it exists. Else, returns null.
+     **/
     CustomEFDTNode getSuccessor(Instance instance) {
         if (isLeaf())
             return null;
@@ -228,6 +249,11 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return successors.getSuccessorNode(attVal);
     }
 
+    /**
+     * Attempts to split this leaf
+     *
+     * @param instance the current instance
+     **/
     protected void attemptInitialSplit(Instance instance) {
         if (depth >= maxDepth) {
             return;
@@ -257,6 +283,11 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         classDistributionAtTimeOfCreation = new DoubleVector(observedClassDistribution.getArrayCopy());
     }
 
+    /**
+     * Reevaluates a split decision that was already made
+     *
+     * @param instance the current instance
+     **/
     protected void reevaluateSplit(Instance instance) {
         numSplitAttempts++;
 
@@ -276,7 +307,6 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         double eps = computeHoeffdingBound();
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
-//            System.err.println(nodeTime);
 
             if (bestSuggestion.splitTest == null) {
                 System.out.println("preprune - null wins");
@@ -323,8 +353,14 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         }
     }
 
+    /**
+     * Initializes the successor nodes when performing a split
+     *
+     * @param xBest the split suggestion for the best split
+     * @param splitAttribute the attribute to split on
+     * @return if the initialization was successful.
+     **/
     protected boolean initializeSuccessors(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
-
         boolean isNominal = splitAttribute.isNominal();
         boolean isBinary = !(xBest.splitTest instanceof NominalAttributeMultiwayTest);
         Double splitValue = null;
@@ -383,8 +419,13 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         }
     }
 
+    /**
+     * Sets the split attribute for this node
+     *
+     * @param xBest the split suggestion for the best split
+     * @param splitAttribute the attribute to split on
+     **/
     protected void setSplitAttribute(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
-        int newSplitAttributeIndex = xBest.splitTest.getAttsTestDependsOn()[0];
         this.splitAttribute = splitAttribute;
         setSplitTest(xBest.splitTest);
     }
@@ -394,6 +435,9 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         splitTest = null;
     }
 
+    /**
+     * Kills the subtree by removing the link to the successors
+     */
     protected void killSubtree() {
         successors = null;
     }
@@ -402,10 +446,19 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return observedClassDistribution.getArrayCopy();
     }
 
+    /**
+     * Updates the class statistics (which class occurred how often)
+     * @param instance the current instance
+     */
     protected void updateStatistics(Instance instance) {
         observedClassDistribution.addToValue((int) instance.classValue(), instance.weight());
     }
 
+    /**
+     * Propagates the instance down the tree
+     * @param instance the current instance
+     * @param totalNumInstances the number of instances seen so far
+     */
     protected void propagateToSuccessors(Instance instance, int totalNumInstances) {
         Double attValue = instance.value(splitAttribute);
         CustomEFDTNode successor = successors.getSuccessorNode(attValue);
@@ -415,6 +468,11 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
             successor.learnInstance(instance, totalNumInstances);
     }
 
+    /**
+     * Add a successor to the children
+     * @param instance the current instance
+     * @return the creates successor. Null, if the successor could not be created
+     */
     protected CustomEFDTNode addSuccessor(Instance instance) {
         List<Integer> usedNomAttributes = new ArrayList<>(usedNominalAttributes); //deep copy
         CustomEFDTNode successor = newNode(depth + 1, null, usedNomAttributes);
@@ -462,12 +520,20 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         }
     }
 
+    /**
+     * If this node is a leaf node
+     * @return true if the node is a leaf
+     */
     boolean isLeaf() {
         if (successors == null)
             return true;
         return successors.size() == 0;
     }
 
+    /**
+     * If this node only has seen instances of the same class
+     * @return true if the number of observed classes is less than 2
+     */
     boolean isPure() {
         return observedClassDistribution.numNonZeroEntries() < 2;
     }
@@ -533,6 +599,11 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return shouldSplit;
     }
 
+    /**
+     * Get the merit if the current split
+     * @param suggestions the suggestions for the possible splits
+     * @return the merit of the current split
+     */
     double getCurrentSuggestionAverageMerit(AttributeSplitSuggestion[] suggestions) {
         double merit = 0.0;
         if (splitTest != null) {
@@ -605,6 +676,14 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return Collections.max(succDepths);
     }
 
+    /**
+     * Replaces the best split suggestion if the node is not allowed to split on that attribute.
+     * This is the case when the parent node splits on that attribute. It prevents splitting the space into thinner and thinner slices.
+     * @param bestSuggestion the best split suggestion
+     * @param suggestions all suggestions
+     * @param blockedAttributeIndex the attribute index of the blocked attribute
+     * @return
+     */
     AttributeSplitSuggestion replaceBestSuggestionIfAttributeIsBlocked(AttributeSplitSuggestion bestSuggestion, AttributeSplitSuggestion[] suggestions, int blockedAttributeIndex) {
         if (suggestions.length == 0)
             return null;
@@ -634,6 +713,10 @@ public class CustomEFDTNode extends AbstractMOAObject implements PerformsTreeRev
         return initializeSuccessors(suggestion, splitAttribute);
     }
 
+    /**
+     * Checks if the subtree of this node performed split revision
+     * @return true if any node in the subtree performed a split revision
+     */
     @Override
     public boolean didPerformTreeRevision() {
         boolean didRevise = performedTreeRevision;

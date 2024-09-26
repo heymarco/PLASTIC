@@ -99,7 +99,13 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
     public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
             "Disable pre-pruning.");
 
-
+    /**
+     * Creates and configures the root node of the tree
+     * <p>
+     * The root is the only access point for the main PLASTIC class. All subtrees etc will simply connect to the root.
+     * <p>
+     * @return the created root node
+     **/
     CustomEFDTNode createRoot() {
         return new CustomEFDTNode(
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
@@ -143,15 +149,16 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
         seenItems = 0;
     }
 
+    /**
+     * Trains the tree on the provided instance
+     * @param inst The instance to train on
+     **/
     @Override
     public void trainOnInstanceImpl(Instance inst) {
         if (root == null)
             root = createRoot();
         root.learnInstance(inst, seenItems);
         seenItems++;
-
-//        if (seenItems % 100 == 0)
-//            System.out.println(root.getSubtreeDepth());
     }
 
     @Override
@@ -167,11 +174,26 @@ public class CustomEFDT extends AbstractClassifier implements MultiClassClassifi
         return false;
     }
 
+    /**
+     * Checks if a tree revision (e.g., pruning or restructuring) was performed at the current time step
+     *
+     * @return if a tree revision was performed
+     **/
     @Override
     public boolean didPerformTreeRevision() {
         return root.didPerformTreeRevision();
     }
 
+    /**
+     * Returns the number of leaves of the tree.
+     *
+     * <p>
+     *     Note that calling this function repeatedly causes some overhead
+     *     as the function traverses the tree recursively.
+     * </p>
+     *
+     * @return the created root node
+     **/
     @Override
     public int getLeafNumber() {
         return root.getLeafNumber();

@@ -40,7 +40,11 @@ public class PlasticNode extends CustomEFDTNode {
     }
 
     public PlasticNode(
-            SplitCriterion splitCriterion, int gracePeriod, Double confidence, Double adaptiveConfidence, boolean useAdaptiveConfidence, String leafPrediction, Integer minSamplesReevaluate, Integer depth, Integer maxDepth, Double tau, Double tauReevaluate, Double relMinDeltaG, boolean binaryOnly, boolean noPrePrune, NominalAttributeClassObserver nominalObserverBlueprint, DoubleVector observedClassDistribution, List<Integer> usedNominalAttributes,
+            SplitCriterion splitCriterion, int gracePeriod, Double confidence, Double adaptiveConfidence,
+            boolean useAdaptiveConfidence, String leafPrediction, Integer minSamplesReevaluate, Integer depth,
+            Integer maxDepth, Double tau, Double tauReevaluate, Double relMinDeltaG, boolean binaryOnly,
+            boolean noPrePrune, NominalAttributeClassObserver nominalObserverBlueprint,
+            DoubleVector observedClassDistribution, List<Integer> usedNominalAttributes,
             int maxBranchLength, double acceptedNumericThresholdDeviation, int blockedAttributeIndex
     ) {
         super(splitCriterion, gracePeriod, confidence, adaptiveConfidence, useAdaptiveConfidence, leafPrediction,
@@ -52,10 +56,12 @@ public class PlasticNode extends CustomEFDTNode {
     }
 
     public PlasticNode(PlasticNode other) {
-        super((SplitCriterion) other.splitCriterion.copy(), other.gracePeriod, other.confidence, other.adaptiveConfidence, other.useAdaptiveConfidence,
-                other.leafPrediction, other.minSamplesReevaluate, other.depth, other.maxDepth,
-                other.tau, other.tauReevaluate, other.relMinDeltaG, other.binaryOnly, other.noPrePrune, other.nominalObserverBlueprint,
-                (DoubleVector) other.observedClassDistribution.copy(), other.usedNominalAttributes, other.blockedAttributeIndex);
+        super((SplitCriterion) other.splitCriterion.copy(), other.gracePeriod, other.confidence,
+                other.adaptiveConfidence, other.useAdaptiveConfidence, other.leafPrediction,
+                other.minSamplesReevaluate, other.depth, other.maxDepth, other.tau, other.tauReevaluate,
+                other.relMinDeltaG, other.binaryOnly, other.noPrePrune, other.nominalObserverBlueprint,
+                (DoubleVector) other.observedClassDistribution.copy(), other.usedNominalAttributes,
+                other.blockedAttributeIndex);
         this.acceptedNumericThresholdDeviation = other.acceptedNumericThresholdDeviation;
         this.maxBranchLength = other.maxBranchLength;
         if (other.successors != null)
@@ -75,6 +81,10 @@ public class PlasticNode extends CustomEFDTNode {
         blockedAttributeIndex = other.blockedAttributeIndex;
     }
 
+    /**
+     * In some cases during restructuring, we create dummy nodes that we prune restructuring has finished
+     * @return true if the node is a dummy node
+     */
     public boolean isDummy() {
         return isDummy;
     }
@@ -117,6 +127,11 @@ public class PlasticNode extends CustomEFDTNode {
         );
     }
 
+    /**
+     * Collect the split attributes of the children and this node.
+     * For performance reasons, this updates the `childrenSplitAttributes` property at every node.
+     * @return the set of attributes the children and this node split on.
+     */
     public Set<Attribute> collectChildrenSplitAttributes() {
         childrenSplitAttributes = new HashSet<>();
         if (isLeaf()) {
@@ -125,17 +140,28 @@ public class PlasticNode extends CustomEFDTNode {
         }
         // add the split attribute of this node to the  set
         childrenSplitAttributes.add(splitAttribute);
-        for (CustomEFDTNode successor: successors.getAllSuccessors()) {
+        for (CustomEFDTNode successor : successors.getAllSuccessors()) {
             // add the split attributes of the subtree
             childrenSplitAttributes.addAll(((PlasticNode) successor).collectChildrenSplitAttributes());
         }
         return childrenSplitAttributes;
     }
 
+    /**
+     * Simply returns `childrenSplitAttributes`. In doubt, call `collectChildrenSplitAttributes` before accessing the property.
+     * @return the set of attributes the children and this node split on.
+     */
     public Set<Attribute> getChildrenSplitAttributes() {
         return childrenSplitAttributes;
     }
 
+    /**
+     * Transfers the split from another node to this node
+     * @param successors the sucessors of the other node
+     * @param splitAttribute the split attribute of the other node
+     * @param splitAttributeIndex the split attribute index of the other node
+     * @param splitTest the split test of the other node
+     */
     public void transferSplit(Successors successors,
                               Attribute splitAttribute,
                               int splitAttributeIndex,
@@ -145,11 +171,14 @@ public class PlasticNode extends CustomEFDTNode {
         setSplitTest(splitTest);
     }
 
+    /**
+     * Increases the depth property in all subtree nodes by 1
+     */
     protected void incrementDepthInSubtree() {
         depth++;
         if (isLeaf())
             return;
-        for (SuccessorIdentifier key: successors.getKeyset()) {
+        for (SuccessorIdentifier key : successors.getKeyset()) {
             PlasticNode successor = (PlasticNode) successors.getSuccessorNode(key);
             successor.incrementDepthInSubtree();
         }
@@ -157,7 +186,7 @@ public class PlasticNode extends CustomEFDTNode {
 
     protected void resetObservers() {
         AutoExpandVector<AttributeClassObserver> newObservers = new AutoExpandVector<>();
-        for (AttributeClassObserver observer: attributeObservers) {
+        for (AttributeClassObserver observer : attributeObservers) {
             if (observer.getClass() == nominalObserverBlueprint.getClass())
                 newObservers.add(newNominalClassObserver());
             else
@@ -166,6 +195,10 @@ public class PlasticNode extends CustomEFDTNode {
         attributeObservers = newObservers;
     }
 
+    /**
+     * If the node was artificially created during restructuring or if it originated from a 'normal' split
+     * @return true if the node was created artificially
+     */
     public boolean isArtificial() {
         return isArtificial;
     }
@@ -173,10 +206,20 @@ public class PlasticNode extends CustomEFDTNode {
     public void setIsArtificial() {
         isArtificial = true;
     }
+
     public void setIsArtificial(boolean val) {
         isArtificial = val;
     }
 
+    /**
+     * Forces a split of this node. This is required during restructuring to make sure the branch contains the desired split attribute.
+     * See step 3 of the algorithm
+     * @param splitAttribute the attribute to split on
+     * @param splitAttributeIndex the index of the attribute to split on
+     * @param splitValue the value of the split (e.g., for numerical splits or binary-nominal)
+     * @param isBinary flag if the split is binary or multiway
+     * @return true, if the split was successful
+     */
     protected boolean forceSplit(Attribute splitAttribute, int splitAttributeIndex, Double splitValue, boolean isBinary) {
         AttributeClassObserver observer = attributeObservers.get(splitAttributeIndex);
         if (observer == null) {
@@ -192,8 +235,7 @@ public class PlasticNode extends CustomEFDTNode {
             );
             if (suggestion != null) {
                 success = makeSplit(splitAttribute, suggestion);
-            }
-            else
+            } else
                 success = false;
 
             if (!success) {
@@ -207,8 +249,7 @@ public class PlasticNode extends CustomEFDTNode {
                     success = successors.addSuccessor(dummyNode, dummyKey);  // will be pruned later on.
                     dummyNode.isDummy = true;
                     return success;
-                }
-                else {
+                } else {
                     PlasticNode a = newNode(depth + 1, new DoubleVector(), new LinkedList<>(usedNominalAttributes));
                     PlasticNode b = newNode(depth + 1, new DoubleVector(), new LinkedList<>(usedNominalAttributes));
                     SuccessorIdentifier keyA = new SuccessorIdentifier(splitAttribute.isNumeric(), splitValue, splitValue, false);
@@ -217,17 +258,14 @@ public class PlasticNode extends CustomEFDTNode {
                     return true;
                 }
             }
-        }
-
-        else {
+        } else {
             GaussianNumericAttributeClassObserver numericObserver = (GaussianNumericAttributeClassObserver) observer;
             AttributeSplitSuggestion suggestion = numericObserver.forceSplit(
                     splitCriterion, observedClassDistribution.getArrayCopy(), splitAttributeIndex, splitValue
             );
             if (suggestion != null) {
                 success = makeSplit(splitAttribute, suggestion);
-            }
-            else
+            } else
                 success = false;
 
             if (!success) {
@@ -249,6 +287,10 @@ public class PlasticNode extends CustomEFDTNode {
         return success;
     }
 
+    /**
+     * Reevaluate the split and restructure if needed
+     * @param instance the current instance
+     */
     @Override
     protected void reevaluateSplit(Instance instance) {
         if (isPure())
@@ -272,7 +314,6 @@ public class PlasticNode extends CustomEFDTNode {
         double eps = computeHoeffdingBound();
 
         if (deltaG > eps || (eps < tauReevaluate && deltaG > tauReevaluate * relMinDeltaG)) {
-//            System.err.println(nodeTime);
 
             if (bestSuggestion.splitTest == null) {
                 System.out.println("preprune - null wins");
@@ -297,6 +338,12 @@ public class PlasticNode extends CustomEFDTNode {
         }
     }
 
+    /**
+     * Perform the restructuring and replace the subtree with the restructured subtree
+     * @param xBest the suggestion for the best split
+     * @param splitAttribute the attribute of the best split
+     * @return true if restructuring was successful
+     */
     private boolean performReordering(AttributeSplitSuggestion xBest, Attribute splitAttribute) {
         Double splitValue = null;
         InstanceConditionalTest test = xBest.splitTest;
@@ -316,7 +363,7 @@ public class PlasticNode extends CustomEFDTNode {
     protected void updateUsedNominalAttributesInSubtree(Attribute splitAttribute, Integer splitAttributeIndex) {
         if (isLeaf())
             return;
-        for (CustomEFDTNode successor: successors.getAllSuccessors()) {
+        for (CustomEFDTNode successor : successors.getAllSuccessors()) {
             PlasticNode s = (PlasticNode) successor;
             s.usedNominalAttributes = getUsedNominalAttributesForSuccessor(splitAttribute, splitAttributeIndex);
             s.updateUsedNominalAttributesInSubtree(splitAttribute, splitAttributeIndex);
@@ -331,7 +378,7 @@ public class PlasticNode extends CustomEFDTNode {
             majorityVotes.add((double) argmax(observedClassDistribution.getArrayRef()));
             return majorityVotes;
         }
-        for (CustomEFDTNode s: getSuccessors().getAllSuccessors()) {
+        for (CustomEFDTNode s : getSuccessors().getAllSuccessors()) {
             majorityVotes.addAll(((PlasticNode) s).getMajorityVotesOfLeaves());
         }
         return majorityVotes;

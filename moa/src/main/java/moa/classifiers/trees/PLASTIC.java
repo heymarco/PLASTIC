@@ -23,14 +23,13 @@ public class PLASTIC extends CustomEFDT implements PerformsTreeRevision, Measure
             'Z', "The accepted deviation between the current numeric threshold of a node and the desired threshold. If the absolute difference is smaller, we keep the successors and simply adjust the threshold.",
             0.05, 0.0, 1_000_000.0);
 
-    public PLASTIC() {
-        super();
-        // Place to override options from EFDT
-        relMinDeltaG = new FloatOption("relMinDeltaG",
-                'G', "Relative minimum information gain to split a tie during reevaluation.",
-                0.0, 0.0, 1.0);
-    }
-
+    /**
+     * Creates and configures the root node of the tree
+     * <p>
+     * The root is the only access point for the main PLASTIC class. All subtrees etc will simply connect to the root.
+     * <p>
+     * @return the created root node
+     **/
     @Override
     PlasticNode createRoot() {
         return new PlasticNode(
