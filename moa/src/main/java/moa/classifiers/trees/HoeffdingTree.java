@@ -226,7 +226,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
         }
 
         public void describeSubtree(HoeffdingTree ht, StringBuilder out,
-                int indent) {
+                                    int indent) {
             StringUtils.appendIndented(out, indent, "Leaf ");
             out.append(ht.getClassNameString());
             out.append(" = ");
@@ -357,7 +357,7 @@ public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
 
         @Override
         public void describeSubtree(HoeffdingTree ht, StringBuilder out,
-                int indent) {
+                                    int indent) {
             for (int branch = 0; branch < numChildren(); branch++) {
                 Node child = getChild(branch);
                 if (child != null) {

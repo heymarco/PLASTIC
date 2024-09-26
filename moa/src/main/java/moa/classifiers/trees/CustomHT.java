@@ -53,16 +53,16 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
             "The allowable error in split decision when using fixed confidence. Values closer to 0 will take longer to decide.",
             0.001, 0.0, 1.0);
 
-    public FloatOption adaptiveConfidenceOption = new FloatOption(
-            "adaptiveSplitConfidence",
-            'C',
-            "The initial allowable error in split decision when using adaptive confidence. Values closer to 0 will take longer to decide.",
-            0.2, 0.0, 1.0);
-
-    public FlagOption useAdaptiveConfidenceOption = new FlagOption(
-            "useAdaptiveConfidence",
-            'a',
-            "Flag if confidence should be adaptive (decreasing over time).");
+//    public FloatOption adaptiveConfidenceOption = new FloatOption(
+//            "adaptiveSplitConfidence",
+//            'C',
+//            "The initial allowable error in split decision when using adaptive confidence. Values closer to 0 will take longer to decide.",
+//            0.2, 0.0, 1.0);
+//
+//    public FlagOption useAdaptiveConfidenceOption = new FlagOption(
+//            "useAdaptiveConfidence",
+//            'a',
+//            "Flag if confidence should be adaptive (decreasing over time).");
 
     public FloatOption tieThresholdOption = new FloatOption("tieThreshold",
             't', "Threshold below which a split will be forced to break ties.",
@@ -71,10 +71,10 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
     public FlagOption binarySplitsOption = new FlagOption("binarySplits", 'b',
             "Only allow binary splits.");
 
-    public MultiChoiceOption leafpredictionOption = new MultiChoiceOption(
-            "leafprediction", 'l', "Leaf prediction to use.", new String[]{
-            "MC", "NB"}, new String[]{
-            "Majority class", "Naive Bayes"}, 0);
+//    public MultiChoiceOption leafpredictionOption = new MultiChoiceOption(
+//            "leafprediction", 'l', "Leaf prediction to use.", new String[]{
+//            "MC", "NB"}, new String[]{
+//            "Majority class", "Naive Bayes"}, 0);
 
     public IntOption maxDepthOption = new IntOption(
             "maxDepth",
@@ -82,8 +82,8 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
             "Maximum allowed depth of tree.",
             20, 0, Integer.MAX_VALUE);
 
-    public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
-            "Disable pre-pruning.");
+//    public FlagOption noPrePruneOption = new FlagOption("noPrePrune", 'p',
+//            "Disable pre-pruning.");
 
 
     private CustomHTNode createRoot() {
@@ -91,14 +91,14 @@ public class CustomHT extends AbstractClassifier implements MultiClassClassifier
                 (SplitCriterion) getPreparedClassOption(splitCriterionOption),
                 gracePeriodOption.getValue(),
                 splitConfidenceOption.getValue(),
-                adaptiveConfidenceOption.getValue(),
-                useAdaptiveConfidenceOption.isSet(),
-                leafpredictionOption.getChosenLabel(),
+                0.2,
+                false,
+                "MC",
                 0,
                 maxDepthOption.getValue(),
                 tieThresholdOption.getValue(),
                 binarySplitsOption.isSet(),
-                noPrePruneOption.isSet(),
+                true,
                 (NominalAttributeClassObserver) getPreparedClassOption(nominalEstimatorOption),
                 new DoubleVector(),
                 new ArrayList<>(),

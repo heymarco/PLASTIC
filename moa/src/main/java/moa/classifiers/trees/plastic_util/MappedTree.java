@@ -79,16 +79,6 @@ public class MappedTree implements Iterator<PlasticBranch> {
         boolean isLeaf = lastNodeOfBranch.isLeaf();
         if (isSwapAttribute || isLeaf)
             return true;
-//        boolean swapAttributeInChildren = false;
-//        for (CustomEFDTNode successor: lastNodeOfBranch.getSuccessors().getAllSuccessors()) {
-//            Set<Attribute> splitAttributesOfChildren = ((PlasticNode) successor).getChildrenSplitAttributes();
-//            if (splitAttributesOfChildren.contains(swapAttribute)) {
-//                swapAttributeInChildren = true;
-//                break;
-//            }
-//        }
-//        if (swapAttributeInChildren)
-//            return false;
         return branch.getBranchRef().size() >= maxBranchLength;
     }
 

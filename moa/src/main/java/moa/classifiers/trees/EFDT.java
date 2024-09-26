@@ -128,7 +128,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             "splitConfidence",
             'c',
             "The allowable error in split decision, values closer to 0 will take longer to decide.",
-            0.001, 0.0, 1.0);
+            0.0000001, 0.0, 1.0);
 
     public FloatOption tieThresholdOption = new FloatOption("tieThreshold",
             't', "Threshold below which a split will be forced to break ties.",
@@ -152,7 +152,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             "MC", "NB", "NBAdaptive"}, new String[]{
             "Majority class",
             "Naive Bayes",
-            "Naive Bayes Adaptive"}, 0);
+            "Naive Bayes Adaptive"}, 2);
 
     public IntOption nbThresholdOption = new IntOption(
             "nbThreshold",
@@ -223,7 +223,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                 leafNode = foundNode.parent;
             }
             return leafNode.getClassVotes(inst, this);
-        } else {
+        }
+        else {
             int numClasses = inst.dataset().numClasses();
             return new double[numClasses];
         }
@@ -338,7 +339,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         for (FoundNode foundNode : learningNodes) {
             if (foundNode.node instanceof ActiveLearningNode) {
                 totalActiveSize += SizeOf.fullSizeOf(foundNode.node);
-            } else {
+            }
+            else {
                 totalInactiveSize += SizeOf.fullSizeOf(foundNode.node);
             }
         }
@@ -377,7 +379,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         Node newLeaf = new InactiveLearningNode(toDeactivate.getObservedClassDistribution());
         if (parent == null) {
             this.treeRoot = newLeaf;
-        } else {
+        }
+        else {
             parent.setChild(parentBranch, newLeaf);
         }
         this.activeLeafNodeCount--;
@@ -389,7 +392,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         Node newLeaf = newLearningNode(toActivate.getObservedClassDistribution());
         if (parent == null) {
             this.treeRoot = newLeaf;
-        } else {
+        }
+        else {
             parent.setChild(parentBranch, newLeaf);
         }
         this.activeLeafNodeCount++;
@@ -438,7 +442,9 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     }
                     double currentSum = node.getInfogainSum().get((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]));
                     node.getInfogainSum().put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), currentSum + bestSplitSuggestion.merit);
-                } else { // handle the null attribute
+                }
+
+                else { // handle the null attribute
                     double currentSum = node.getInfogainSum().get(-1); // null split
                     node.getInfogainSum().put(-1, Math.max(0.0, currentSum + bestSplitSuggestion.merit));
                     assert node.getInfogainSum().get(-1) >= 0.0 : "Negative infogain shouldn't be possible here.";
@@ -448,32 +454,30 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
             if (bestSplitSuggestions.length < 2) {
                 shouldSplit = bestSplitSuggestions.length > 0;
-            } else {
-                double hoeffdingBound = computeHoeffdingBound(
-                        splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
-                        this.splitConfidenceOption.getValue(),
-                        node.getWeightSeen());
+            }
+
+            else {
+                double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
+                        this.splitConfidenceOption.getValue(), node.getWeightSeen());
                 AttributeSplitSuggestion bestSuggestion = bestSplitSuggestions[bestSplitSuggestions.length - 1];
 
                 double bestSuggestionAverageMerit;
-                double currentAverageMerit = 0.0;  // node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
+                double currentAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
 
                 // because this is an unsplit leaf. current average merit should be always zero on the null split.
 
                 if (bestSuggestion.splitTest == null) { // if you have a null split
-                    bestSuggestionAverageMerit = 0.0;  // node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-                } else {
-                    bestSuggestionAverageMerit = bestSuggestion.merit; // node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
+                    bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
                 }
-//                if (bestSuggestion.splitTest == null) { // if you have a null split
-//                    bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-//                } else {
-//                    bestSuggestionAverageMerit = node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
-//                }
+                else {
+                    bestSuggestionAverageMerit = node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
+                }
 
                 if (bestSuggestion.merit < 1e-10) {
                     shouldSplit = false; // we don't use average here
-                } else if ((bestSuggestionAverageMerit - currentAverageMerit) >
+                }
+
+                else if ((bestSuggestionAverageMerit - currentAverageMerit) >
                         hoeffdingBound
                         || (hoeffdingBound < this.tieThresholdOption.getValue())) {
                     if (bestSuggestionAverageMerit - currentAverageMerit < hoeffdingBound) {
@@ -523,9 +527,6 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                         node.disableAttribute(poorAtt);
                     }
                 }
-//                if (shouldSplit) {
-//                    System.out.println(node.nodeTime);
-//                }
             }
             if (shouldSplit) {
                 splitCount++;
@@ -534,12 +535,12 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                 if (splitDecision.splitTest == null) {
                     // preprune - null wins
                     deactivateLearningNode(node, parent, parentIndex);
-                } else {
+                }
+                else {
                     Node newSplit = newSplitNode(splitDecision.splitTest,
                             node.getObservedClassDistribution(), splitDecision.numSplits());
                     ((EFDTSplitNode) newSplit).attributeObservers = node.attributeObservers; // copy the attribute observers
                     newSplit.setInfogainSum(node.getInfogainSum());  // transfer infogain history, leaf to split
-                    newSplit.numSplitAttempts = node.getNumSplitAttempts();
 
                     for (int i = 0; i < splitDecision.numSplits(); i++) {
 
@@ -560,7 +561,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     this.activeLeafNodeCount += splitDecision.numSplits();
                     if (parent == null) {
                         this.treeRoot = newSplit;
-                    } else {
+                    }
+                    else {
                         parent.setChild(parentIndex, newSplit);
                     }
 
@@ -827,6 +829,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         public FoundNode filterInstanceToLeaf(Instance inst, SplitNode parent,
                                               int parentBranch) {
 
+            //System.err.println("OVERRIDING ");
+
             int childIndex = instanceChildIndex(inst);
             if (childIndex >= 0) {
                 Node child = getChild(childIndex);
@@ -909,9 +913,11 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     //Recursive delete of SplitNodes
                     if (child instanceof SplitNode) {
                         ((EFDTSplitNode) child).killSubtree(ht);
-                    } else if (child instanceof ActiveLearningNode) {
+                    }
+                    else if (child instanceof ActiveLearningNode) {
                         ht.activeLeafNodeCount--;
-                    } else if (child instanceof InactiveLearningNode) {
+                    }
+                    else if (child instanceof InactiveLearningNode) {
                         ht.inactiveLeafNodeCount--;
                     }
                 }
@@ -979,6 +985,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
         protected void reEvaluateBestSplit(EFDTSplitNode node, EFDTSplitNode parent,
                                            int parentIndex) {
 
+
             node.addToSplitAttempts(1);
 
             // EFDT must transfer over gain averages when replacing a node: leaf to split, split to leaf, or split to split
@@ -999,11 +1006,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
             //compute Hoeffding bound
             SplitCriterion splitCriterion = (SplitCriterion) getPreparedClassOption(EFDT.this.splitCriterionOption);
-            double hoeffdingBound = computeHoeffdingBound(
-                    splitCriterion.getRangeOfMerit(node.getClassDistributionAtTimeOfCreation()),
-                    EFDT.this.splitConfidenceOption.getValue(),
-                    node.observedClassDistribution.sumOfValues()
-            );
+            double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getClassDistributionAtTimeOfCreation()),
+                    EFDT.this.splitConfidenceOption.getValue(), node.observedClassDistribution.sumOfValues());
 
             // get best split suggestions
             AttributeSplitSuggestion[] bestSplitSuggestions = node.getBestSplitSuggestions(splitCriterion, EFDT.this);
@@ -1021,7 +1025,9 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     }
                     double currentSum = node.getInfogainSum().get((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]));
                     node.getInfogainSum().put((bestSplitSuggestion.splitTest.getAttsTestDependsOn()[0]), currentSum + bestSplitSuggestion.merit);
-                } else { // handle the null attribute. this is fine to do- it'll always average zero, and we will use this later to potentially burn bad splits.
+                }
+
+                else { // handle the null attribute. this is fine to do- it'll always average zero, and we will use this later to potentially burn bad splits.
                     double currentSum = node.getInfogainSum().get(-1); // null split
                     node.getInfogainSum().put(-1, currentSum + bestSplitSuggestion.merit);
                 }
@@ -1035,13 +1041,16 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
             if (bestSuggestion.splitTest == null) { // best is null
                 bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-            } else {
+            }
+            else {
+
                 bestSuggestionAverageMerit = node.getInfogainSum().get(bestSuggestion.splitTest.getAttsTestDependsOn()[0]) / node.getNumSplitAttempts();
             }
 
             if (node.splitTest == null) { // current is null- shouldn't happen, check for robustness
                 currentAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-            } else {
+            }
+            else {
                 currentAverageMerit = node.getInfogainSum().get(node.splitTest.getAttsTestDependsOn()[0]) / node.getNumSplitAttempts();
             }
 
@@ -1053,6 +1062,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
             if (deltaG > hoeffdingBound
                     || (hoeffdingBound < tieThreshold && deltaG > tieThreshold / 2)) {
 
+                System.err.println(numInstances);
+
                 AttributeSplitSuggestion splitDecision = bestSuggestion;
 
                 // if null split wins
@@ -1063,31 +1074,33 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     replacement.setInfogainSum(node.getInfogainSum()); // transfer infogain history, split to replacement leaf
                     if (node.getParent() != null) {
                         node.getParent().setChild(parentIndex, replacement);
-                    } else {
+                    }
+                    else {
                         assert (node.isRoot());
                         node.setRoot(true);
                     }
-                } else {
+                }
+
+                else {
 
                     Node newSplit = newSplitNode(splitDecision.splitTest,
                             node.getObservedClassDistribution(), splitDecision.numSplits());
 
                     ((EFDTSplitNode) newSplit).attributeObservers = node.attributeObservers; // copy the attribute observers
                     newSplit.setInfogainSum(node.getInfogainSum());  // transfer infogain history, split to replacement split
-                    newSplit.numSplitAttempts = node.getNumSplitAttempts();
 
-//                    if (node.splitTest == splitDecision.splitTest
-//                            && node.splitTest.getClass() == NumericAttributeBinaryTest.class &&
-//                            (argmax(splitDecision.resultingClassDistributions[0]) == argmax(node.getChild(0).getObservedClassDistribution())
-//                                    || argmax(splitDecision.resultingClassDistributions[1]) == argmax(node.getChild(1).getObservedClassDistribution()))
-//                    ) {
-//                        // change split but don't destroy the subtrees
-//                        for (int i = 0; i < splitDecision.numSplits(); i++) {
-//                            ((EFDTSplitNode) newSplit).setChild(i, this.getChild(i));
-//                        }
-//
-//                    } else {
-                    if (true) {
+                    if (node.splitTest == splitDecision.splitTest
+                            && node.splitTest.getClass() == NumericAttributeBinaryTest.class &&
+                            (argmax(splitDecision.resultingClassDistributions[0]) == argmax(node.getChild(0).getObservedClassDistribution())
+                                    || argmax(splitDecision.resultingClassDistributions[1]) == argmax(node.getChild(1).getObservedClassDistribution()))
+                    ) {
+                        // change split but don't destroy the subtrees
+                        for (int i = 0; i < splitDecision.numSplits(); i++) {
+                            ((EFDTSplitNode) newSplit).setChild(i, this.getChild(i));
+                        }
+
+                    }
+                    else {
 
                         // otherwise, torch the subtree and split on the new best attribute.
 
@@ -1119,7 +1132,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                         ((EFDTNode) newSplit).setRoot(true);
                         ((EFDTNode) newSplit).setParent(null);
                         EFDT.this.treeRoot = newSplit;
-                    } else {
+                    }
+                    else {
                         ((EFDTNode) newSplit).setRoot(false);
                         ((EFDTNode) newSplit).setParent(parent);
                         parent.setChild(parentIndex, newSplit);
@@ -1151,7 +1165,7 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
     }
 
 
-    public class EFDTLearningNode extends ActiveLearningNode implements EFDTNode {
+    public class EFDTLearningNode extends LearningNodeNBAdaptive implements EFDTNode {
 
         private boolean isRoot;
 
@@ -1382,18 +1396,21 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                 Arrays.sort(bestSplitSuggestions);
                 boolean shouldSplit = false;
 
-                for (int i = 0; i < bestSplitSuggestions.length; i++) {
+                for (int i = 0; i < bestSplitSuggestions.length; i++){
 
                     node.addToSplitAttempts(1); // even if we don't actually attempt to split, we've computed infogains
 
 
-                    if (bestSplitSuggestions[i].splitTest != null) {
-                        if (!node.getInfogainSum().containsKey((bestSplitSuggestions[i].splitTest.getAttsTestDependsOn()[0]))) {
+                    if (bestSplitSuggestions[i].splitTest != null){
+                        if (!node.getInfogainSum().containsKey((bestSplitSuggestions[i].splitTest.getAttsTestDependsOn()[0])))
+                        {
                             node.getInfogainSum().put((bestSplitSuggestions[i].splitTest.getAttsTestDependsOn()[0]), 0.0);
                         }
                         double currentSum = node.getInfogainSum().get((bestSplitSuggestions[i].splitTest.getAttsTestDependsOn()[0]));
                         node.getInfogainSum().put((bestSplitSuggestions[i].splitTest.getAttsTestDependsOn()[0]), currentSum + bestSplitSuggestions[i].merit);
-                    } else { // handle the null attribute
+                    }
+
+                    else { // handle the null attribute
                         double currentSum = node.getInfogainSum().get(-1); // null split
                         node.getInfogainSum().put(-1, currentSum + Math.max(0.0, bestSplitSuggestions[i].merit));
                         assert node.getInfogainSum().get(-1) >= 0.0 : "Negative infogain shouldn't be possible here.";
@@ -1403,7 +1420,9 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
                 if (bestSplitSuggestions.length < 2) {
                     shouldSplit = bestSplitSuggestions.length > 0;
-                } else {
+                }
+
+                else {
 
 
                     double hoeffdingBound = computeHoeffdingBound(splitCriterion.getRangeOfMerit(node.getObservedClassDistribution()),
@@ -1416,29 +1435,33 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
                     double bestSuggestionAverageMerit = 0.0;
                     double secondBestSuggestionAverageMerit = 0.0;
 
-                    if (bestSuggestion.splitTest == null) { // if you have a null split
+                    if(bestSuggestion.splitTest == null){ // if you have a null split
                         bestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-                    } else {
+                    } else{
                         bestSuggestionAverageMerit = node.getInfogainSum().get((bestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
                     }
 
-                    if (secondBestSuggestion.splitTest == null) { // if you have a null split
+                    if(secondBestSuggestion.splitTest == null){ // if you have a null split
                         secondBestSuggestionAverageMerit = node.getInfogainSum().get(-1) / node.getNumSplitAttempts();
-                    } else {
+                    } else{
                         secondBestSuggestionAverageMerit = node.getInfogainSum().get((secondBestSuggestion.splitTest.getAttsTestDependsOn()[0])) / node.getNumSplitAttempts();
                     }
 
                     //comment this if statement to get VFDT bug
-                    if (bestSuggestion.merit < 1e-10) { // we don't use average here
+                    if(bestSuggestion.merit < 1e-10){ // we don't use average here
                         shouldSplit = false;
-                    } else if ((bestSuggestionAverageMerit - secondBestSuggestionAverageMerit > hoeffdingBound)
-                            || (hoeffdingBound < this.tieThresholdOption.getValue())) {
+                    }
+
+                    else
+                    if ((bestSuggestionAverageMerit - secondBestSuggestionAverageMerit > hoeffdingBound)
+                            || (hoeffdingBound < this.tieThresholdOption.getValue()))
+                    {
                         shouldSplit = true;
                     }
 
-                    if (shouldSplit) {
-                        for (Integer i : node.usedNominalAttributes) {
-                            if (bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i) {
+                    if(shouldSplit){
+                        for(Integer i : node.usedNominalAttributes){
+                            if(bestSuggestion.splitTest.getAttsTestDependsOn()[0] == i){
                                 shouldSplit = false;
                                 break;
                             }
@@ -1494,8 +1517,8 @@ public class EFDT extends AbstractClassifier implements MultiClassClassifier {
 
                             Node newChild = newLearningNode(splitDecision.resultingClassDistributionFromSplit(i));
 
-                            if (splitDecision.splitTest.getClass() == NominalAttributeBinaryTest.class
-                                    || splitDecision.splitTest.getClass() == NominalAttributeMultiwayTest.class) {
+                            if(splitDecision.splitTest.getClass() == NominalAttributeBinaryTest.class
+                                    ||splitDecision.splitTest.getClass() == NominalAttributeMultiwayTest.class){
                                 newChild.usedNominalAttributes = new ArrayList<Integer>(node.usedNominalAttributes); //deep copy
                                 newChild.usedNominalAttributes.add(splitDecision.splitTest.getAttsTestDependsOn()[0]);
                                 // no  nominal attribute should be split on more than once in the path

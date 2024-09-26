@@ -1,4 +1,6 @@
 /*
+ *   StreamingGradientBoostedTreesTest.java
+ *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
@@ -13,12 +15,10 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * EFDTTest.java
- * Copyright (C) 2019 University of Waikato, Hamilton, NZ
+/**
+ * 
  */
-
-package moa.classifiers.trees;
+package moa.classifiers.meta;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -26,11 +26,12 @@ import moa.classifiers.AbstractMultipleClassifierTestCase;
 import moa.classifiers.Classifier;
 
 /**
- * Tests the EFDT classifier.
- *
- * @author Corey Sterling (csterlin at waikato dot ac dot nz)
+ * Tests the StreamingGradientBoostedTrees classifier.
+ * 
+ * @author  Nuwan Gunasekara (ng98 at students dot waikato dot ac dot nz)
+ * @version $Revision$
  */
-public class EFDTTest
+public class StreamingGradientBoostedTreesTest
   extends AbstractMultipleClassifierTestCase {
 
   /**
@@ -38,11 +39,10 @@ public class EFDTTest
    *
    * @param name 	the name of the test
    */
-  public EFDTTest(String name) {
+  public StreamingGradientBoostedTreesTest(String name) {
     super(name);
-    this.setNumberTests(2);
+    this.setNumberTests(1);
   }
-
 
   /**
    * Returns the classifier setups to use in the regression test.
@@ -51,22 +51,21 @@ public class EFDTTest
    */
   @Override
   protected Classifier[] getRegressionClassifierSetups() {
-    EFDT[]	result;
-    result    = new EFDT[2];
-    result[0] = new EFDT();
-    result[1] = new EFDT();
-    result[1].tieThresholdOption.setValue(0.2);
+    StreamingGradientBoostedTrees SGBTTest = new StreamingGradientBoostedTrees();
+    SGBTTest.numberOfboostingIterations.setValue(10);
 
-    return result;
+    return new Classifier[]{
+            SGBTTest,
+    };
   }
-
+  
   /**
    * Returns a test suite.
    *
    * @return		the test suite
    */
   public static Test suite() {
-    return new TestSuite(EFDTTest.class);
+    return new TestSuite(StreamingGradientBoostedTreesTest.class);
   }
 
   /**

@@ -22,7 +22,6 @@ package moa.streams;
 import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.InstancesHeader;
 import moa.core.Example;
-import moa.core.InstanceExample;
 import moa.core.ObjectRepository;
 import moa.options.AbstractOptionHandler;
 import moa.options.ClassOption;
@@ -31,10 +30,19 @@ import moa.streams.filters.StreamFilter;
 import moa.tasks.TaskMonitor;
 
 /**
+<<<<<<< HEAD
  * Class for representing a stream that is filtered.
  *
  * @author Richard Kirkby (rkirkby@cs.waikato.ac.nz)
  * @version $Revision: 7 $
+=======
+ * Helper class for pipelines in CapyMOA.
+ * Implements the stream interface, acts as a queue by supporting `addToQueue`.
+ * In comparison to QueueStream, this class allows specifying a filter that is applied to the queued instances.
+ *
+ * @author Marco Heyden (marco.heyden@kit.edu)
+ * @version $Revision: 1 $
+>>>>>>> 87888d47e005e5ab5703d4a9eceb9bd14e7e5275
  */
 public class FilteredQueueStream extends AbstractOptionHandler implements
         ExampleStream {

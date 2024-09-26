@@ -66,14 +66,13 @@ public class RandomProjectionFilter extends AbstractStreamFilter {
     @Override
     public InstanceExample nextInstance() {
         Instance sparseInstance = (Instance) this.inputStream.nextInstance().getData();
-
-        return new InstanceExample(transformedInstance(sparseInstance,
-                randomProjection(sparseInstance,this.GaussMatrix)));
+        System.out.println(GaussMatrix == null);
+        Instance transformedInst = transformedInstance(sparseInstance, randomProjection(sparseInstance,this.GaussMatrix));
+        return new InstanceExample(transformedInst);
     }
 
 
     public DenseInstance transformedInstance(Instance sparseInst, double [] val) {
-
         Instances header = this.streamHeader;
         double[] attributeValues = new double[header.numAttributes()];
 
