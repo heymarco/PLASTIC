@@ -41,7 +41,7 @@ public class FilteredQueueStream extends AbstractOptionHandler implements
 
     @Override
     public String getPurposeString() {
-        return "A stream that is filtered.";
+        return "A stream that is filtered and that supports addToQueue.";
     }
 
     private static final long serialVersionUID = 1L;
@@ -50,7 +50,7 @@ public class FilteredQueueStream extends AbstractOptionHandler implements
             "Filters to apply.", StreamFilter.class,
             "AddNoiseFilter");
 
-    private QueueStream queue;
+    private QueueStream queue = new QueueStream();
     private ExampleStream filterChain;
 
     public void addToQueue(Instance instance) {
@@ -106,6 +106,7 @@ public class FilteredQueueStream extends AbstractOptionHandler implements
 
     @Override
     public void restart() {
+        queue.restart();
         this.filterChain.restart();
     }
 

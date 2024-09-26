@@ -15,7 +15,7 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program. If not, see <http://www.gnu.org/licenses/>.
- *    
+ *
  */
 package moa.streams;
 
@@ -49,32 +49,32 @@ public class FilteredStream extends AbstractOptionHandler implements
             "generators.RandomTreeGenerator");
 
     public ClassOption filtersOption = new ClassOption("filters", 'f',
-            "Filters to apply.", StreamFilter.class, 
+            "Filters to apply.", StreamFilter.class,
             "AddNoiseFilter");
 
     protected ExampleStream filterChain;
 
     @Override
     public void prepareForUseImpl(TaskMonitor monitor,
-            ObjectRepository repository) {
-        StreamFilter filters; 
-            monitor.setCurrentActivity("Materializing filter " //+ (i + 1)
+                                  ObjectRepository repository) {
+        StreamFilter filters;
+        monitor.setCurrentActivity("Materializing filter " //+ (i + 1)
+                + "...", -1.0);
+        filters = (StreamFilter) getPreparedClassOption(this.filtersOption);
+        if (monitor.taskShouldAbort()) {
+            return;
+        }
+        if (filters instanceof OptionHandler) {
+            monitor.setCurrentActivity("Preparing filter " //+ (i + 1)
                     + "...", -1.0);
-            filters = (StreamFilter) getPreparedClassOption(this.filtersOption);
+            ((OptionHandler) filters).prepareForUse(monitor, repository);
             if (monitor.taskShouldAbort()) {
                 return;
             }
-            if (filters instanceof OptionHandler) {
-                monitor.setCurrentActivity("Preparing filter " //+ (i + 1)
-                        + "...", -1.0);
-                ((OptionHandler) filters).prepareForUse(monitor, repository);
-                if (monitor.taskShouldAbort()) {
-                    return;
-                }
-            }
+        }
         ExampleStream chain = (ExampleStream) getPreparedClassOption(this.streamOption);
-            filters.setInputStream(chain);
-            chain = filters;
+        filters.setInputStream(chain);
+        chain = filters;
         this.filterChain = chain;
     }
 
